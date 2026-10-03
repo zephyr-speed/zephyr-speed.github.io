@@ -1,0 +1,1337 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ZEPHYR — тест скорости интернета</title>
+<meta name="description" content="ZEPHYR — быстрый и честный тест скорости интернета: пинг, джиттер, download и upload.">
+<meta name="theme-color" content="#08201B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="ZEPHYR">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<!-- Иконки и манифест заполняются скриптом ниже из одного SVG-логотипа -->
+<link rel="icon" type="image/svg+xml" id="favicon">
+<link rel="apple-touch-icon" id="appleIcon">
+<link rel="manifest" id="manifestLink">
+
+<script>
+/* =====================================================================
+   ЛОГОТИП: единственный источник правды.
+   Буква «Z», нижняя линия которой уходит в дугу спидометра.
+   Используется для favicon, apple-touch-icon, манифеста и шапки.
+   ===================================================================== */
+window.ZEPHYR_LOGO = function (id) {
+  id = id || 'zg';
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+    '<defs><linearGradient id="' + id + '" gradientUnits="userSpaceOnUse" x1="16" y1="16" x2="50" y2="46">' +
+    '<stop offset="0" stop-color="#FF9E6D"/><stop offset="1" stop-color="#B8A4FF"/></linearGradient></defs>' +
+    '<rect width="64" height="64" rx="15" fill="#08201B"/>' +
+    '<rect x="1" y="1" width="62" height="62" rx="14" fill="none" stroke="#F2E6CF" stroke-opacity=".16"/>' +
+    /* тонкие риски шкалы вокруг дуги */
+    '<g stroke="#F2E6CF" stroke-opacity=".35" stroke-width="1.4" stroke-linecap="round">' +
+    '<path d="M52.5 30h2.5"/><path d="M50.9 37.6l2.2 1.1"/><path d="M46.4 43.9l1.6 1.9"/></g>' +
+    /* сама Z: верх → диагональ → низ → дуга спидометра */
+    '<path d="M17 17.5H45L20.5 43H33.5A13.5 13.5 0 0 0 47 29.5" fill="none" stroke="url(#' + id + ')" ' +
+    'stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>' +
+    /* светящийся кончик стрелки */
+    '<circle cx="47" cy="29.5" r="3.4" fill="#F2E6CF"/>' +
+    '</svg>';
+};
+(function setupIcons() {
+  var svg = window.ZEPHYR_LOGO('zfav');
+  var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  document.getElementById('favicon').href = uri;
+  document.getElementById('appleIcon').href = uri;
+
+  // Манифест web app (data URI). Сначала с SVG-иконкой, потом дополним PNG.
+  function setManifest(extraIcons) {
+    var m = {
+      name: 'ZEPHYR — тест скорости',
+      short_name: 'ZEPHYR',
+      description: 'Скорость, которую видно',
+      start_url: location.href.split('#')[0],
+      scope: location.href.split('#')[0].replace(/[^/]*$/, ''),
+      display: 'standalone',
+      background_color: '#08201B',
+      theme_color: '#08201B',
+      icons: [{ src: uri, sizes: 'any', type: 'image/svg+xml' }].concat(extraIcons || [])
+    };
+    document.getElementById('manifestLink').href =
+      'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(m));
+  }
+  setManifest();
+
+  // Рендерим SVG в PNG (iOS не понимает SVG в apple-touch-icon).
+  function toPng(size) {
+    return new Promise(function (res) {
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = c.height = size;
+          c.getContext('2d').drawImage(img, 0, 0, size, size);
+          res(c.toDataURL('image/png'));
+        } catch (e) { res(null); }
+      };
+      img.onerror = function () { res(null); };
+      img.src = uri;
+    });
+  }
+  Promise.all([toPng(180), toPng(192), toPng(512)]).then(function (p) {
+    if (p[0]) document.getElementById('appleIcon').href = p[0];
+    var extra = [];
+    if (p[1]) extra.push({ src: p[1], sizes: '192x192', type: 'image/png' });
+    if (p[2]) extra.push({ src: p[2], sizes: '512x512', type: 'image/png', purpose: 'any maskable' });
+    if (extra.length) setManifest(extra);
+  });
+})();
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://speed.cloudflare.com">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+/* =====================================================================
+   1. ПАЛИТРА И ТЕМЫ
+   ===================================================================== */
+:root {
+  --bg: #08201B;
+  --bg2: #0E2E27;
+  --apricot: #FF9E6D;
+  --lavender: #B8A4FF;
+  --champagne: #F2E6CF;
+  --text: #EAF2EF;
+  --muted: #7FA39A;
+
+  /* производные (только из цветов палитры) */
+  --heading: var(--champagne);
+  --glass: rgba(14, 46, 39, .55);
+  --glass-strong: rgba(14, 46, 39, .78);
+  --border: rgba(242, 230, 207, .12);
+  --line: rgba(242, 230, 207, .14);
+  --track: rgba(242, 230, 207, .07);
+  --apricot-glow: rgba(255, 158, 109, .38);
+  --lavender-glow: rgba(184, 164, 255, .32);
+  --blob-opacity: .38;
+  --shadow: 0 20px 60px rgba(0, 0, 0, .35);
+
+  --radius: 24px;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-num: 'Space Grotesk', 'JetBrains Mono', ui-monospace, monospace;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --bg: #F4EFE6;
+  --bg2: #EAE2D3;
+  --text: #08201B;
+  --muted: rgba(8, 32, 27, .6);
+  --heading: #08201B;
+  --glass: rgba(255, 255, 255, .5);
+  --glass-strong: rgba(255, 255, 255, .78);
+  --border: rgba(8, 32, 27, .1);
+  --line: rgba(8, 32, 27, .12);
+  --track: rgba(8, 32, 27, .07);
+  --blob-opacity: .3;
+  --shadow: 0 20px 50px rgba(8, 32, 27, .1);
+  color-scheme: light;
+}
+
+/* =====================================================================
+   2. БАЗА
+   ===================================================================== */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  transition: background .5s ease, color .5s ease;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.num { font-family: var(--font-num); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+h1, h2, h3 { color: var(--heading); margin: 0; font-weight: 600; letter-spacing: -.02em; }
+
+/* =====================================================================
+   3. ФОН: плывущие размытые пятна («ветер»)
+   ===================================================================== */
+.wind { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.wind span {
+  position: absolute; border-radius: 50%;
+  filter: blur(90px); opacity: var(--blob-opacity);
+  will-change: transform;
+}
+.wind .b1 { width: 46vmax; height: 46vmax; background: var(--apricot); top: -18vmax; left: -12vmax; animation: drift1 34s ease-in-out infinite alternate; }
+.wind .b2 { width: 40vmax; height: 40vmax; background: var(--lavender); bottom: -16vmax; right: -10vmax; animation: drift2 40s ease-in-out infinite alternate; }
+.wind .b3 { width: 30vmax; height: 30vmax; background: var(--bg2); top: 30%; left: 40%; opacity: .9; animation: drift3 28s ease-in-out infinite alternate; }
+.wind .b4 { width: 22vmax; height: 22vmax; background: var(--champagne); top: 55%; left: 5%; opacity: calc(var(--blob-opacity) * .45); animation: drift2 46s ease-in-out infinite alternate-reverse; }
+@keyframes drift1 { to { transform: translate(28vw, 18vh) scale(1.15); } }
+@keyframes drift2 { to { transform: translate(-30vw, -14vh) scale(.9); } }
+@keyframes drift3 { to { transform: translate(-22vw, 12vh) scale(1.2); } }
+/* лёгкое «зерно» поверх, чтобы градиенты не полосили */
+.grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* =====================================================================
+   4. КАРКАС: шапка, навигация
+   ===================================================================== */
+.app { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; padding: 28px 24px 64px; }
+header.top { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: inherit; }
+.brand .logo { width: 46px; height: 46px; border-radius: 13px; box-shadow: 0 0 0 1px var(--border), 0 8px 30px var(--apricot-glow); flex: none; }
+.brand .logo svg { width: 100%; height: 100%; display: block; }
+.brand-name { font-family: var(--font-num); font-weight: 700; font-size: 22px; letter-spacing: .18em; color: var(--heading); line-height: 1; }
+.brand-tag { font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: .01em; }
+.server-chip {
+  display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--border); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+  font-size: 12.5px; color: var(--muted); max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.server-chip b { color: var(--text); font-weight: 500; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.ok { background: var(--apricot); box-shadow: 0 0 10px var(--apricot); }
+.dot.bad { background: var(--lavender); }
+
+nav.tabs {
+  display: flex; gap: 4px; padding: 5px; border-radius: 999px; width: max-content; max-width: 100%;
+  background: var(--glass); border: 1px solid var(--border);
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); margin: 0 auto 32px;
+}
+nav.tabs button {
+  display: flex; align-items: center; gap: 8px; border: 0; background: transparent;
+  padding: 10px 18px; border-radius: 999px; font-size: 14px; font-weight: 500; color: var(--muted);
+  transition: color .25s, background .25s, box-shadow .25s; white-space: nowrap;
+}
+nav.tabs button svg { width: 17px; height: 17px; flex: none; }
+nav.tabs .sm { display: none; }
+nav.tabs button:hover { color: var(--lavender); }
+nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shadow: 0 6px 24px var(--apricot-glow); }
+:root[data-theme="light"] nav.tabs button.active { color: #08201B; }
+
+/* =====================================================================
+   5. КАРТОЧКИ (glassmorphism)
+   ===================================================================== */
+.card {
+  position: relative; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
+  backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2);
+  box-shadow: var(--shadow); padding: 28px;
+}
+/* тонкая линия шампань по верхней кромке */
+.card::before {
+  content: ''; position: absolute; left: 24px; right: 24px; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+}
+.card-title { font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+/* вкладки и анимация переключения */
+.tab { display: none; }
+.tab.active { display: block; animation: tabIn .5s cubic-bezier(.2, .8, .2, 1); }
+@keyframes tabIn { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
+.section-head { margin-bottom: 22px; }
+.section-head h2 { font-size: clamp(24px, 3.2vw, 32px); }
+.section-head p { color: var(--muted); margin: 8px 0 0; font-size: 15px; line-height: 1.55; max-width: 620px; }
+
+/* =====================================================================
+   6. ВКЛАДКА «ТЕСТ»
+   ===================================================================== */
+.test-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.gauge-card { display: flex; flex-direction: column; align-items: center; padding: 32px 28px 30px; }
+.gauge { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; }
+.gauge svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.gauge .tick { stroke: var(--line); stroke-width: 1.5; stroke-linecap: round; }
+.gauge .tick-label { fill: var(--muted); font-family: var(--font-num); font-size: 11px; }
+.gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; padding-top: 6%; }
+.gauge-value { font-family: var(--font-num); font-weight: 600; font-size: clamp(52px, 9vw, 76px); line-height: 1; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -.04em; }
+.gauge-unit { color: var(--muted); font-size: 14px; margin-top: 8px; letter-spacing: .04em; }
+.gauge-phase { margin-top: 14px; font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--apricot); min-height: 1em; font-weight: 600; }
+.gauge-phase.up { color: var(--lavender); }
+
+.start-btn {
+  margin-top: 8px; border: 0; padding: 17px 44px; border-radius: 999px;
+  background: linear-gradient(135deg, var(--apricot), #FFB48C 60%, var(--apricot));
+  color: #08201B; font-weight: 600; font-size: 16px; letter-spacing: .02em;
+  box-shadow: 0 10px 40px var(--apricot-glow), inset 0 1px 0 rgba(255, 255, 255, .35);
+  transition: transform .2s, box-shadow .3s, background .3s; display: inline-flex; align-items: center; gap: 10px;
+}
+.start-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 50px var(--apricot-glow), 0 0 0 4px rgba(184, 164, 255, .25); }
+.start-btn:active { transform: translateY(0) scale(.98); }
+.start-btn.running { background: transparent; color: var(--apricot); box-shadow: inset 0 0 0 1.5px var(--apricot); }
+.start-btn.running:hover { color: var(--lavender); box-shadow: inset 0 0 0 1.5px var(--lavender); }
+.start-btn svg { width: 18px; height: 18px; }
+
+/* прогресс по этапам */
+.stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.stage { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 9px; }
+.stage .bar { height: 4px; border-radius: 4px; background: var(--track); overflow: hidden; }
+.stage .bar i { display: block; height: 100%; width: 0; border-radius: 4px; background: var(--apricot); transition: width .25s linear; box-shadow: 0 0 12px var(--apricot); }
+.stage.s-up .bar i { background: var(--lavender); box-shadow: 0 0 12px var(--lavender); }
+.stage.active { color: var(--text); }
+.stage.done { color: var(--heading); }
+.stage span { display: flex; justify-content: space-between; }
+
+/* живые показатели */
+.metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.metric { padding: 20px; border-radius: 18px; background: var(--track); border: 1px solid var(--border); transition: border-color .3s, box-shadow .3s; }
+.metric.live { border-color: rgba(255, 158, 109, .45); box-shadow: 0 0 30px rgba(255, 158, 109, .12); }
+.metric.live.m-up { border-color: rgba(184, 164, 255, .5); box-shadow: 0 0 30px rgba(184, 164, 255, .14); }
+.metric-label { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
+.metric-label i { width: 8px; height: 8px; border-radius: 2px; background: var(--champagne); display: inline-block; }
+.m-down .metric-label i { background: var(--apricot); }
+.m-up .metric-label i { background: var(--lavender); }
+.metric-value { font-family: var(--font-num); font-size: 34px; font-weight: 600; margin-top: 10px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
+.m-down .metric-value { color: var(--apricot); }
+.m-up .metric-value { color: var(--lavender); }
+.metric-value small { font-size: 13px; color: var(--muted); font-family: var(--font-ui); font-weight: 400; margin-left: 5px; letter-spacing: 0; }
+
+/* итоговая карточка */
+.result { margin-top: 24px; display: none; }
+.result.show { display: block; animation: resultIn .7s cubic-bezier(.2, .8, .2, 1); }
+@keyframes resultIn { from { opacity: 0; transform: translateY(20px) scale(.98); } to { opacity: 1; transform: none; } }
+.result-head { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+.grade-ring { width: 76px; height: 76px; flex: none; position: relative; }
+.grade-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.grade-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-num); font-size: 22px; font-weight: 600; }
+.result-head h3 { font-size: 24px; }
+.result-head p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.verdict { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: var(--track); border: 1px solid var(--border); font-size: 14px; line-height: 1.4; transition: transform .25s, border-color .25s; }
+.verdict:hover { transform: translateY(-2px); border-color: var(--lavender); }
+.verdict .ic { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+.verdict .ic svg { width: 16px; height: 16px; }
+.verdict.ok .ic { background: rgba(255, 158, 109, .16); color: var(--apricot); }
+.verdict.warn .ic { background: rgba(242, 230, 207, .12); color: var(--champagne); }
+:root[data-theme="light"] .verdict.warn .ic { color: #08201B; background: rgba(8, 32, 27, .07); }
+.verdict.bad .ic { background: rgba(184, 164, 255, .16); color: var(--lavender); }
+.verdict small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+
+/* баннер ошибки */
+.alert { display: none; margin-top: 24px; padding: 18px 20px; border-radius: 18px; border: 1px solid rgba(184, 164, 255, .45); background: rgba(184, 164, 255, .1); gap: 14px; align-items: flex-start; }
+.alert.show { display: flex; animation: resultIn .5s ease; }
+.alert .ic { color: var(--lavender); flex: none; margin-top: 1px; }
+.alert b { display: block; margin-bottom: 4px; color: var(--heading); }
+.alert p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.alert.info { border-color: var(--line); background: var(--track); }
+.alert.info .ic { color: var(--champagne); }
+
+/* =====================================================================
+   7. ИСТОРИЯ / СТАТИСТИКА
+   ===================================================================== */
+.chart-box { position: relative; height: 280px; }
+.empty { text-align: center; padding: 56px 20px; color: var(--muted); }
+.empty svg { width: 46px; height: 46px; opacity: .5; margin-bottom: 14px; }
+.empty b { display: block; color: var(--text); font-weight: 500; margin-bottom: 6px; font-size: 16px; }
+.table-wrap { overflow-x: auto; margin: 0 -8px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 10px 8px; border-bottom: 1px solid var(--line); }
+td { padding: 14px 8px; border-bottom: 1px solid var(--track); font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+tbody tr { transition: background .2s; }
+tbody tr:hover { background: var(--track); }
+td.c-down { color: var(--apricot); font-weight: 600; }
+td.c-up { color: var(--lavender); font-weight: 600; }
+td.c-date { font-family: var(--font-ui); color: var(--muted); }
+.badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-family: var(--font-ui); background: rgba(184, 164, 255, .15); color: var(--lavender); font-weight: 600; }
+.stack { display: grid; gap: 24px; }
+.ghost-btn { border: 1px solid var(--border); background: transparent; padding: 8px 16px; border-radius: 999px; font-size: 13px; color: var(--muted); transition: color .2s, border-color .2s, background .2s; text-transform: none; letter-spacing: 0; font-weight: 500; }
+.ghost-btn:hover { color: var(--lavender); border-color: var(--lavender); }
+.ghost-btn.danger { color: var(--apricot); border-color: var(--apricot); background: rgba(255, 158, 109, .1); }
+
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.stat { padding: 22px; }
+.stat .metric-label { margin-bottom: 14px; }
+.stat-main { font-family: var(--font-num); font-size: 36px; font-weight: 600; line-height: 1; letter-spacing: -.03em; }
+.stat-main small { font-size: 13px; color: var(--muted); font-family: var(--font-ui); font-weight: 400; margin-left: 4px; letter-spacing: 0; }
+.stat-sub { display: flex; justify-content: space-between; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.stat-sub b { display: block; color: var(--text); font-family: var(--font-num); font-size: 15px; font-weight: 500; margin-top: 3px; }
+.s-down .stat-main { color: var(--apricot); }
+.s-up .stat-main { color: var(--lavender); }
+
+/* =====================================================================
+   8. ГАЙД
+   ===================================================================== */
+.guide-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+.guide-card h3 { font-size: 19px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
+.guide-card h3 .gi { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 158, 109, .14); color: var(--apricot); }
+.guide-card:nth-child(even) h3 .gi { background: rgba(184, 164, 255, .15); color: var(--lavender); }
+.guide-card h3 .gi svg { width: 18px; height: 18px; }
+.guide-card > p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 16px; }
+.req { list-style: none; padding: 0; margin: 0; }
+.req li { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.req li b { font-family: var(--font-num); font-weight: 600; color: var(--apricot); white-space: nowrap; }
+.guide-card:nth-child(even) .req li b { color: var(--lavender); }
+.terms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.term b { font-family: var(--font-num); color: var(--heading); font-size: 17px; display: block; margin-bottom: 8px; }
+.term p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
+
+/* =====================================================================
+   9. НАСТРОЙКИ
+   ===================================================================== */
+.settings { max-width: 680px; }
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
+.setting:first-of-type { border-top: 0; padding-top: 4px; }
+.setting h3 { font-size: 16px; font-weight: 500; color: var(--text); }
+.setting p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--track); border: 1px solid var(--border); flex: none; }
+.seg button { border: 0; background: transparent; padding: 8px 16px; border-radius: 999px; font-size: 13.5px; color: var(--muted); font-weight: 500; transition: all .25s; white-space: nowrap; }
+.seg button:hover { color: var(--lavender); }
+.seg button.on { background: var(--glass-strong); color: var(--text); box-shadow: 0 0 0 1px var(--apricot), 0 4px 18px var(--apricot-glow); }
+.seg button:disabled { opacity: .45; cursor: not-allowed; }
+
+footer.foot { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+footer.foot a { color: inherit; }
+
+/* =====================================================================
+   10. АДАПТИВ
+   ===================================================================== */
+@media (max-width: 960px) {
+  .test-grid { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .terms { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .app { padding: 18px 16px calc(110px + env(safe-area-inset-bottom)); }
+  header.top { margin-bottom: 20px; }
+  .server-chip { display: none; }
+  .card { padding: 22px 18px; border-radius: 20px; }
+  .card::before { left: 18px; right: 18px; }
+  /* навигация уезжает вниз, как в приложении */
+  nav.tabs {
+    position: fixed; z-index: 20; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
+    width: auto; margin: 0; justify-content: space-between; border-radius: 22px; padding: 6px;
+    background: var(--glass-strong);
+  }
+  nav.tabs button { flex-direction: column; gap: 4px; padding: 8px 4px; font-size: 10.5px; flex: 1; border-radius: 16px; }
+  nav.tabs button svg { width: 20px; height: 20px; }
+  nav.tabs .lg { display: none; } nav.tabs .sm { display: inline; }
+  .metrics { gap: 10px; }
+  .metric { padding: 16px; }
+  .metric-value { font-size: 27px; }
+  .verdicts { grid-template-columns: 1fr; }
+  .guide-grid { grid-template-columns: 1fr; }
+  .setting { flex-direction: column; align-items: flex-start; }
+  .chart-box { height: 230px; }
+  .stat-main { font-size: 30px; }
+}
+@media (max-width: 420px) {
+  .stat-grid, .terms { grid-template-columns: 1fr; }
+  nav.tabs button span { font-size: 9.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="wind" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
+<div class="grain" aria-hidden="true"></div>
+
+<div class="app">
+  <!-- ============ ШАПКА ============ -->
+  <header class="top">
+    <a class="brand" href="#" data-goto="test" aria-label="ZEPHYR — на главную">
+      <div class="logo" id="headerLogo"></div>
+      <div>
+        <div class="brand-name">ZEPHYR</div>
+        <div class="brand-tag">Скорость, которую видно</div>
+      </div>
+    </a>
+    <div class="server-chip" id="serverChip"><i class="dot" id="serverDot"></i><span id="serverText">Ищем ближайший узел…</span></div>
+  </header>
+
+  <!-- ============ НАВИГАЦИЯ ============ -->
+  <nav class="tabs" id="tabs" aria-label="Разделы">
+    <button class="active" data-tab="test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><span>Тест</span></button>
+    <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>История</span></button>
+    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Статистика</span></button>
+    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 0 7.5 23H19"/></svg><span class="lg">Что значат цифры</span><span class="sm">Гайд</span></button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Настройки</span></button>
+  </nav>
+
+  <main>
+    <!-- ================================================================
+         ВКЛАДКА 1: ТЕСТ
+         ================================================================ -->
+    <section class="tab active" id="tab-test">
+      <div class="test-grid">
+        <div class="card gauge-card">
+          <div class="gauge">
+            <svg viewBox="0 0 300 300" id="gaugeSvg" aria-hidden="true">
+              <defs>
+                <linearGradient id="arcGrad" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="260" y2="0">
+                  <stop offset="0" stop-color="#FF9E6D"/>
+                  <stop offset="1" stop-color="#B8A4FF"/>
+                </linearGradient>
+                <filter id="tipGlow" x="-200%" y="-200%" width="500%" height="500%">
+                  <feGaussianBlur stdDeviation="5" result="b"/>
+                  <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+                <filter id="arcGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="6"/>
+                </filter>
+              </defs>
+              <g id="gaugeTicks"></g>
+              <path id="arcTrack" fill="none" stroke="var(--track)" stroke-width="14" stroke-linecap="round"/>
+              <path id="arcGlowPath" fill="none" stroke="url(#arcGrad)" stroke-width="14" stroke-linecap="round" filter="url(#arcGlow)" opacity=".55"/>
+              <path id="arcValue" fill="none" stroke="url(#arcGrad)" stroke-width="14" stroke-linecap="round"/>
+              <circle id="arcTip" r="7" fill="#F2E6CF" filter="url(#tipGlow)" opacity="0"/>
+            </svg>
+            <div class="gauge-center" aria-live="polite">
+              <div class="gauge-value" id="gaugeValue">0</div>
+              <div class="gauge-unit" id="gaugeUnit">Мбит/с</div>
+              <div class="gauge-phase" id="gaugePhase">готов к замеру</div>
+            </div>
+          </div>
+          <button class="start-btn" id="startBtn">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+            <span>Начать тест</span>
+          </button>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">Ход замера <span class="num" id="totalPct" style="letter-spacing:0">0%</span></div>
+            <div class="stages">
+              <div class="stage" id="st-ping"><span>Пинг</span><div class="bar"><i></i></div></div>
+              <div class="stage" id="st-down"><span>Download</span><div class="bar"><i></i></div></div>
+              <div class="stage s-up" id="st-up"><span>Upload</span><div class="bar"><i></i></div></div>
+            </div>
+            <div class="metrics" style="margin-top:22px">
+              <div class="metric m-ping" id="mt-ping"><div class="metric-label"><i></i>Пинг</div><div class="metric-value"><span id="v-ping">—</span><small>мс</small></div></div>
+              <div class="metric m-jitter" id="mt-jitter"><div class="metric-label"><i></i>Джиттер</div><div class="metric-value"><span id="v-jitter">—</span><small>мс</small></div></div>
+              <div class="metric m-down" id="mt-down"><div class="metric-label"><i></i>Download</div><div class="metric-value"><span id="v-down">—</span><small class="unit-label">Мбит/с</small></div></div>
+              <div class="metric m-up" id="mt-up"><div class="metric-label"><i></i>Upload</div><div class="metric-value"><span id="v-up">—</span><small class="unit-label">Мбит/с</small></div></div>
+            </div>
+          </div>
+
+          <div class="alert" id="alert" role="alert">
+            <svg class="ic" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>
+            <div><b id="alertTitle"></b><p id="alertText"></p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- итоговая карточка -->
+      <div class="card result" id="result">
+        <div class="result-head">
+          <div class="grade-ring">
+            <svg viewBox="0 0 80 80"><circle cx="40" cy="40" r="34" fill="none" stroke="var(--track)" stroke-width="7"/>
+              <circle id="gradeArc" cx="40" cy="40" r="34" fill="none" stroke="url(#gradeGrad)" stroke-width="7" stroke-linecap="round" stroke-dasharray="213.6" stroke-dashoffset="213.6" style="transition:stroke-dashoffset 1.2s cubic-bezier(.2,.8,.2,1)"/>
+              <defs><linearGradient id="gradeGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FF9E6D"/><stop offset="1" stop-color="#B8A4FF"/></linearGradient></defs>
+            </svg>
+            <b id="gradeScore">0</b>
+          </div>
+          <div>
+            <h3 id="gradeTitle">—</h3>
+            <p id="gradeText"></p>
+          </div>
+        </div>
+        <div class="verdicts" id="verdicts"></div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         ВКЛАДКА 2: ИСТОРИЯ
+         ================================================================ -->
+    <section class="tab" id="tab-history">
+      <div class="section-head">
+        <h2>История замеров</h2>
+        <p>Ваши замеры хранятся только в этом браузере на этом устройстве. Регистрация не нужна, другие посетители вашу историю не видят.</p>
+      </div>
+      <div class="stack">
+        <div class="card">
+          <div class="card-title">Динамика <span style="text-transform:none;letter-spacing:0;font-weight:500">
+            <span style="color:var(--apricot)">●</span> download &nbsp; <span style="color:var(--lavender)">●</span> upload</span></div>
+          <div class="chart-box" id="historyChartBox"><canvas id="historyChart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Все замеры <button class="ghost-btn" id="clearBtn">Очистить историю</button></div>
+          <div id="historyTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         ВКЛАДКА 3: СТАТИСТИКА
+         ================================================================ -->
+    <section class="tab" id="tab-stats">
+      <div class="section-head">
+        <h2>Статистика</h2>
+        <p>Средние, лучшие и худшие значения по всем вашим замерам на этом устройстве.</p>
+      </div>
+      <div class="stack">
+        <div class="stat-grid" id="statGrid"></div>
+        <div class="card">
+          <div class="card-title">Все замеры <span style="text-transform:none;letter-spacing:0;font-weight:500">
+            <span style="color:var(--apricot)">■</span> download &nbsp; <span style="color:var(--lavender)">■</span> upload</span></div>
+          <div class="chart-box" id="statsChartBox"><canvas id="statsChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         ВКЛАДКА 4: ЧТО ЗНАЧАТ ЦИФРЫ
+         ================================================================ -->
+    <section class="tab" id="tab-guide">
+      <div class="section-head">
+        <h2>Что значат цифры</h2>
+        <p>Коротко о том, на что смотреть в результатах и какая скорость нужна под конкретные задачи. Значения ориентировочные, на одно устройство.</p>
+      </div>
+      <div class="card terms">
+        <div class="term"><b>Пинг</b><p>Время, за которое сигнал доходит до сервера и обратно. Чем меньше, тем отзывчивее сеть.</p></div>
+        <div class="term"><b>Джиттер</b><p>Насколько скачет пинг. Высокий джиттер даёт рывки в играх и «робота» в звонках.</p></div>
+        <div class="term"><b>Download</b><p>Скорость получения данных: видео, сайты, загрузки, обновления игр.</p></div>
+        <div class="term"><b>Upload</b><p>Скорость отправки: видеосвязь, стримы, выгрузка файлов в облако.</p></div>
+      </div>
+      <div class="guide-grid">
+        <div class="card guide-card">
+          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span>Стриминг видео</h3>
+          <p>Смотрим download. Если дома несколько экранов, скорости складываются.</p>
+          <ul class="req">
+            <li>SD (480p)<b>от 3 Мбит/с</b></li>
+            <li>HD (720p)<b>от 5 Мбит/с</b></li>
+            <li>Full HD (1080p)<b>от 10 Мбит/с</b></li>
+            <li>4K / HDR<b>от 25 Мбит/с</b></li>
+          </ul>
+        </div>
+        <div class="card guide-card">
+          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 9.5v.01M17.5 11v.01"/><path d="M7 5h10a4 4 0 0 1 4 4v4.5a3.5 3.5 0 0 1-6 2.4L13.5 14h-3L9 15.9a3.5 3.5 0 0 1-6-2.4V9a4 4 0 0 1 4-4z"/></svg></span>Онлайн-игры</h3>
+          <p>Для игр скорость вторична: важны пинг и его стабильность.</p>
+          <ul class="req">
+            <li>Пинг: комфортно<b>до 40 мс</b></li>
+            <li>Пинг: терпимо<b>40–80 мс</b></li>
+            <li>Джиттер<b>до 15 мс</b></li>
+            <li>Download / Upload<b>от 5 / 1 Мбит/с</b></li>
+          </ul>
+        </div>
+        <div class="card guide-card">
+          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></span>Видеозвонки</h3>
+          <p>Здесь работает и upload: вы ведь тоже отправляете видео.</p>
+          <ul class="req">
+            <li>Голосовой звонок<b>от 0,5 Мбит/с</b></li>
+            <li>Видео 1-на-1 в HD<b>от 1,5–3 Мбит/с</b></li>
+            <li>Групповой созвон<b>от 3–4 Мбит/с</b></li>
+            <li>Пинг<b>до 100 мс</b></li>
+          </ul>
+        </div>
+        <div class="card guide-card">
+          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>Свои стримы и облако</h3>
+          <p>Для трансляций и бэкапов решает upload. Берите запас ~30%.</p>
+          <ul class="req">
+            <li>Стрим 720p30<b>от 4 Мбит/с</b></li>
+            <li>Стрим 1080p60<b>от 8–10 Мбит/с</b></li>
+            <li>Стрим 4K<b>от 25 Мбит/с</b></li>
+            <li>1 ГБ в облако при 50 Мбит/с<b>≈ 3 мин</b></li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-title" style="margin-bottom:10px">Мбит/с или МБ/с?</div>
+        <p style="margin:0;color:var(--muted);line-height:1.6;font-size:14.5px">Провайдеры пишут скорость в мегабитах (Мбит/с), а браузер и торренты показывают мегабайты (МБ/с). В одном байте 8 бит, так что 100 Мбит/с ≈ 12,5 МБ/с. Переключить единицы можно в настройках.</p>
+      </div>
+    </section>
+
+    <!-- ================================================================
+         ВКЛАДКА 5: НАСТРОЙКИ
+         ================================================================ -->
+    <section class="tab" id="tab-settings">
+      <div class="section-head">
+        <h2>Настройки</h2>
+        <p>Под себя: единицы, длительность замера и тема.</p>
+      </div>
+      <div class="card settings">
+        <div class="setting">
+          <div><h3>Единицы скорости</h3><p>Мегабиты, как у провайдера, или мегабайты, как в браузере.</p></div>
+          <div class="seg" data-setting="unit">
+            <button data-value="mbps">Мбит/с</button>
+            <button data-value="MBps">МБ/с</button>
+          </div>
+        </div>
+        <div class="setting">
+          <div><h3>Длительность теста</h3><p>Время на каждый этап (download и upload). Дольше значит точнее, особенно на быстрых каналах.</p></div>
+          <div class="seg" data-setting="duration">
+            <button data-value="6">6 с</button>
+            <button data-value="10">10 с</button>
+            <button data-value="15">15 с</button>
+          </div>
+        </div>
+        <div class="setting">
+          <div><h3>Тема</h3><p>Тёмная изумрудная или светлая песочная.</p></div>
+          <div class="seg" data-setting="theme">
+            <button data-value="dark">Тёмная</button>
+            <button data-value="light">Светлая</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    Замеры идут через публичные эндпоинты <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">speed.cloudflare.com</a> к ближайшему узлу.<br>
+    ZEPHYR · Скорость, которую видно
+  </footer>
+</div>
+
+<script>
+/* =====================================================================
+   ZEPHYR · логика
+   Структура:
+   1) константы и состояние
+   2) утилиты и форматирование
+   3) спидометр
+   4) движок замера (ping / download / upload)
+   5) запуск теста и UI
+   6) оценка результата
+   7) история, статистика, графики
+   8) вкладки и настройки
+   ===================================================================== */
+'use strict';
+
+/* ---------- 1. КОНСТАНТЫ И СОСТОЯНИЕ ---------- */
+const BASE = 'https://speed.cloudflare.com';   // публичный эндпоинт Cloudflare
+const PING_SAMPLES = 14;                         // сколько замеров пинга
+const DOWN_STREAMS = 4;                          // параллельных потоков на download
+const UP_STREAMS = 3;                            // параллельных потоков на upload
+const DOWN_CHUNK = 25e6;                         // размер одного запроса download, байт
+const GAUGE_MAX = 1000;                          // верх шкалы, Мбит/с (шкала логарифмическая)
+
+const C = { apricot: '#FF9E6D', lavender: '#B8A4FF', champagne: '#F2E6CF' };
+
+const state = {
+  settings: { unit: 'mbps', duration: 10, theme: 'dark' },
+  history: [],      // [{date, ping, jitter, down, up}] — сохраняется в localStorage этого браузера
+  run: null,        // активный тест: {aborted, reason, controllers, xhrs}
+};
+
+// Настройки (не история!) запоминаем в браузере для удобства, если это разрешено
+try {
+  const saved = JSON.parse(localStorage.getItem('zephyr-settings') || 'null');
+  if (saved) Object.assign(state.settings, saved);
+} catch (e) { /* хранилище недоступно — работаем с дефолтами */ }
+function saveSettings() { try { localStorage.setItem('zephyr-settings', JSON.stringify(state.settings)); } catch (e) {} }
+
+/* История замеров: у каждого посетителя своя, хранится в его браузере (localStorage).
+   Без регистрации и без сервера. Если хранилище недоступно (приватный режим и т.п.),
+   история просто живёт до перезагрузки страницы. */
+const HISTORY_KEY = 'zephyr-history';
+const HISTORY_LIMIT = 300; // чтобы не раздувать хранилище
+try {
+  const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+  if (Array.isArray(raw)) {
+    state.history = raw
+      .filter((r) => r && isFinite(r.down) && isFinite(r.up) && isFinite(r.ping))
+      .map((r) => ({ date: new Date(r.date), ping: +r.ping, jitter: +r.jitter || 0, down: +r.down, up: +r.up }));
+  }
+} catch (e) { /* битые данные или нет доступа — начинаем с пустой истории */ }
+function saveHistory() {
+  if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.map((r) => ({ ...r, date: r.date.toISOString() })))); } catch (e) {}
+}
+
+/* ---------- 2. УТИЛИТЫ ---------- */
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+class AbortedError extends Error { constructor(msg) { super(msg); this.name = 'AbortedError'; } }
+class NetError extends Error { constructor(title, text) { super(title); this.name = 'NetError'; this.text = text; } }
+
+const unitLabel = () => (state.settings.unit === 'mbps' ? 'Мбит/с' : 'МБ/с');
+const toUnit = (mbps) => (state.settings.unit === 'mbps' ? mbps : mbps / 8);
+function fmtNum(v) {
+  if (v == null || !isFinite(v)) return '—';
+  const d = v < 10 ? 2 : v < 100 ? 1 : 0;
+  return v.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+const fmtSpeed = (mbps) => fmtNum(mbps == null ? null : toUnit(mbps));
+const fmtMs = (ms) => (ms == null || !isFinite(ms) ? '—' : ms < 10 ? ms.toFixed(1).replace('.', ',') : Math.round(ms).toString());
+const median = (a) => { const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+
+/* ---------- 3. СПИДОМЕТР ---------- */
+const G = { cx: 150, cy: 158, r: 118, start: 135, sweep: 270 };
+const polar = (deg, r = G.r) => {
+  const a = (deg * Math.PI) / 180;
+  return [G.cx + r * Math.cos(a), G.cy + r * Math.sin(a)];
+};
+// Логарифмическая шкала: 0..1000 Мбит/с → 0..1
+const speedToFrac = (mbps) => Math.min(1, Math.log1p(Math.max(0, mbps)) / Math.log1p(GAUGE_MAX));
+const ARC_LEN = G.r * (G.sweep * Math.PI / 180);
+
+function buildGauge() {
+  const [sx, sy] = polar(G.start), [ex, ey] = polar(G.start + G.sweep);
+  const d = `M${sx} ${sy} A${G.r} ${G.r} 0 1 1 ${ex} ${ey}`;
+  ['arcTrack', 'arcValue', 'arcGlowPath'].forEach((id) => $('#' + id).setAttribute('d', d));
+  ['arcValue', 'arcGlowPath'].forEach((id) => {
+    const el = $('#' + id);
+    el.style.strokeDasharray = ARC_LEN;
+    el.style.strokeDashoffset = ARC_LEN;
+  });
+  drawTicks();
+}
+// Риски и подписи шкалы зависят от выбранных единиц
+function drawTicks() {
+  const ticks = state.settings.unit === 'mbps'
+    ? [0, 5, 10, 50, 100, 250, 500, 1000]
+    : [0, 1, 2, 5, 10, 25, 50, 125];
+  const g = $('#gaugeTicks');
+  let html = '';
+  // мелкие риски
+  for (let i = 0; i <= 54; i++) {
+    const deg = G.start + (G.sweep * i) / 54;
+    const [x1, y1] = polar(deg, G.r - 16), [x2, y2] = polar(deg, G.r - (i % 6 === 0 ? 24 : 19));
+    html += `<line class="tick" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" opacity="${i % 6 === 0 ? 1 : .5}"/>`;
+  }
+  // подписи
+  ticks.forEach((t) => {
+    const mbps = state.settings.unit === 'mbps' ? t : t * 8;
+    const deg = G.start + G.sweep * speedToFrac(mbps);
+    const [x, y] = polar(deg, G.r - 40);
+    html += `<text class="tick-label" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle">${t}</text>`;
+  });
+  g.innerHTML = html;
+}
+
+// Плавная анимация стрелки: цель задаём, кадр догоняет
+const gauge = { target: 0, shown: 0, mode: 'idle', number: null };
+function setGauge(mbps) { gauge.target = mbps; }
+function gaugeLoop() {
+  gauge.shown += (gauge.target - gauge.shown) * 0.12;
+  if (Math.abs(gauge.target - gauge.shown) < 0.005) gauge.shown = gauge.target;
+  const f = speedToFrac(gauge.shown);
+  const off = ARC_LEN * (1 - f);
+  $('#arcValue').style.strokeDashoffset = off;
+  $('#arcGlowPath').style.strokeDashoffset = off;
+  const tip = $('#arcTip');
+  const [x, y] = polar(G.start + G.sweep * f);
+  tip.setAttribute('cx', x); tip.setAttribute('cy', y);
+  tip.setAttribute('opacity', f > 0.002 ? 1 : 0);
+  tip.setAttribute('fill', gauge.mode === 'up' ? C.lavender : gauge.mode === 'down' ? C.apricot : C.champagne);
+  // число в центре: при замере скорости — анимированное значение
+  if (gauge.mode === 'down' || gauge.mode === 'up' || gauge.mode === 'idle-speed') {
+    $('#gaugeValue').textContent = fmtSpeed(gauge.shown);
+  }
+  requestAnimationFrame(gaugeLoop);
+}
+
+/* ---------- 4. ДВИЖОК ЗАМЕРА ---------- */
+function abortAll() {
+  const r = state.run; if (!r) return;
+  r.controllers.forEach((c) => { try { c.abort(); } catch (e) {} });
+  r.xhrs.forEach((x) => { try { x.abort(); } catch (e) {} });
+  r.controllers.clear(); r.xhrs.clear();
+}
+function checkAbort() { if (state.run.aborted) throw new AbortedError(state.run.reason); }
+// Скорость по окну последних winMs миллисекунд, Мбит/с
+function windowSpeed(samples, winMs) {
+  const last = samples[samples.length - 1];
+  let first = samples[0];
+  for (let i = samples.length - 1; i >= 0; i--) { if (last.t - samples[i].t >= winMs) { first = samples[i]; break; } }
+  const dt = (last.t - first.t) / 1000;
+  return dt > 0 ? ((last.b - first.b) * 8) / dt / 1e6 : 0;
+}
+// Итоговая скорость: без первых секунд «разгона» TCP
+function finalSpeed(samples, warmMs) {
+  const last = samples[samples.length - 1];
+  const first = samples.find((s) => s.t >= warmMs) || samples[0];
+  const dt = (last.t - first.t) / 1000;
+  return dt > 0.3 ? ((last.b - first.b) * 8) / dt / 1e6 : windowSpeed(samples, 1e9);
+}
+
+/** ПИНГ И ДЖИТТЕР: серия пустых запросов, берём медиану RTT. */
+async function measurePing(onSample) {
+  const rtts = [];
+  for (let i = 0; i <= PING_SAMPLES; i++) {
+    checkAbort();
+    const url = `${BASE}/__down?bytes=0&_=${Date.now()}_${i}`;
+    const ctrl = new AbortController(); state.run.controllers.add(ctrl);
+    const timeout = setTimeout(() => ctrl.abort(), 6000);
+    const t0 = performance.now();
+    let res;
+    try {
+      res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+      await res.arrayBuffer();
+    } catch (e) {
+      checkAbort();
+      throw new NetError('Сервер замера недоступен', 'Не удалось достучаться до speed.cloudflare.com. Проверьте подключение; его может блокировать VPN, корпоративная сеть или блокировщик рекламы.');
+    } finally { clearTimeout(timeout); state.run.controllers.delete(ctrl); }
+    const t1 = performance.now();
+    if (!res.ok) throw new NetError('Сервер замера ответил ошибкой', `Код ответа ${res.status}. Попробуйте ещё раз через минуту.`);
+    // Если браузер отдаёт точные тайминги (Resource Timing) — используем их, без накладных расходов JS
+    let rtt = t1 - t0;
+    const entry = performance.getEntriesByName(url).pop();
+    if (entry && entry.requestStart > 0 && entry.responseStart > entry.requestStart) rtt = entry.responseStart - entry.requestStart;
+    performance.clearResourceTimings();
+    if (i === 0) continue; // первый запрос включает DNS/TLS — отбрасываем
+    rtts.push(rtt);
+    onSample(median(rtts), i / PING_SAMPLES);
+    await sleep(50);
+  }
+  const ping = median(rtts);
+  let jitter = 0;
+  for (let i = 1; i < rtts.length; i++) jitter += Math.abs(rtts[i] - rtts[i - 1]);
+  jitter /= Math.max(1, rtts.length - 1);
+  return { ping, jitter };
+}
+
+/** DOWNLOAD: несколько параллельных потоков читают тело ответа, считаем байты на лету. */
+async function measureDownload(durationMs, onTick) {
+  let bytes = 0, stop = false, got = false, errors = 0, failure = null;
+  const start = performance.now();
+  const samples = [{ t: 0, b: 0 }];
+
+  const worker = async () => {
+    while (!stop) {
+      const ctrl = new AbortController(); state.run.controllers.add(ctrl);
+      try {
+        const res = await fetch(`${BASE}/__down?bytes=${DOWN_CHUNK}&_=${Math.random()}`, { cache: 'no-store', signal: ctrl.signal });
+        if (!res.ok) throw new NetError('Сервер замера ответил ошибкой', `Код ответа ${res.status} на этапе download.`);
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          bytes += value.byteLength; got = true;
+        }
+      } catch (e) {
+        if (stop || state.run.aborted) return;
+        if (++errors > 6) { failure = e instanceof NetError ? e : new NetError('Download прервался', 'Соединение с сервером замера постоянно обрывается.'); return; }
+        await sleep(300);
+      } finally { state.run.controllers.delete(ctrl); }
+    }
+  };
+  const workers = Array.from({ length: DOWN_STREAMS }, worker);
+
+  for (;;) {
+    await sleep(150);
+    if (state.run.aborted) { stop = true; abortAll(); throw new AbortedError(state.run.reason); }
+    const t = performance.now() - start;
+    samples.push({ t, b: bytes });
+    if (failure && !got) { stop = true; abortAll(); throw failure; }
+    onTick(windowSpeed(samples, 1200), Math.min(1, t / durationMs));
+    if (t >= durationMs) break;
+  }
+  stop = true; abortAll();
+  await Promise.allSettled(workers);
+  if (!got) throw new NetError('Не удалось скачать данные', 'Сервер не прислал ни одного байта. Возможно, соединение блокируется.');
+  return finalSpeed(samples, Math.min(durationMs * 0.3, 2500));
+}
+
+/** UPLOAD: XHR с upload.onprogress, чтобы видеть отправленные байты в реальном времени. */
+let randomChunk = null;
+const blobCache = new Map();
+function makeBlob(size) {
+  if (!randomChunk) {
+    // 1 МБ случайных данных (crypto отдаёт максимум 64 КБ за вызов)
+    randomChunk = new Uint8Array(1 << 20);
+    for (let i = 0; i < randomChunk.length; i += 65536) crypto.getRandomValues(randomChunk.subarray(i, i + 65536));
+  }
+  if (!blobCache.has(size)) blobCache.set(size, new Blob(Array(Math.ceil(size / randomChunk.length)).fill(randomChunk)));
+  return blobCache.get(size);
+}
+async function measureUpload(durationMs, onTick) {
+  let sentDone = 0, stop = false, got = false, errors = 0, failure = null;
+  const inflight = new Map();
+  const total = () => { let s = sentDone; inflight.forEach((v) => { s += v; }); return s; };
+  const start = performance.now();
+  const samples = [{ t: 0, b: 0 }];
+
+  const send = (blob) => new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    state.run.xhrs.add(x);
+    x.open('POST', `${BASE}/__up?_=${Math.random()}`);
+    x.upload.onprogress = (e) => { inflight.set(x, e.loaded); if (e.loaded > 0) got = true; };
+    const cleanup = () => { state.run && state.run.xhrs.delete(x); inflight.delete(x); };
+    x.onload = () => {
+      cleanup();
+      if (x.status >= 200 && x.status < 300) { sentDone += blob.size; resolve(); }
+      else reject(new NetError('Сервер замера ответил ошибкой', `Код ответа ${x.status} на этапе upload.`));
+    };
+    x.onerror = () => { cleanup(); reject(new NetError('Upload не прошёл', 'Не удалось отправить данные на сервер замера.')); };
+    x.onabort = () => { cleanup(); resolve(); };
+    x.send(blob);
+  });
+
+  const worker = async () => {
+    let size = 1 << 20; // начинаем с 1 МБ и растём, если канал быстрый
+    while (!stop) {
+      const t0 = performance.now();
+      try { await send(makeBlob(size)); }
+      catch (e) {
+        if (stop || state.run.aborted) return;
+        if (++errors > 6) { failure = e; return; }
+        await sleep(300); continue;
+      }
+      if (performance.now() - t0 < 1500 && size < (32 << 20)) size *= 2;
+    }
+  };
+  const workers = Array.from({ length: UP_STREAMS }, worker);
+
+  for (;;) {
+    await sleep(150);
+    if (state.run.aborted) { stop = true; abortAll(); throw new AbortedError(state.run.reason); }
+    const t = performance.now() - start;
+    samples.push({ t, b: total() });
+    if (failure && !got) { stop = true; abortAll(); throw failure; }
+    onTick(windowSpeed(samples, 1200), Math.min(1, t / durationMs));
+    if (t >= durationMs) break;
+  }
+  const result = finalSpeed(samples, Math.min(durationMs * 0.3, 2500)); // считаем ДО abort
+  stop = true; abortAll();
+  await Promise.allSettled(workers);
+  if (!got) throw new NetError('Не удалось отправить данные', 'Сервер не принял ни одного байта на этапе upload.');
+  return result;
+}
+
+/* ---------- 5. ЗАПУСК ТЕСТА И UI ---------- */
+const PHASE_WEIGHT = { ping: [0, .12], down: [.12, .56], up: [.56, 1] };
+function setStage(name, frac) {
+  ['ping', 'down', 'up'].forEach((n) => {
+    const el = $('#st-' + n), bar = el.querySelector('i');
+    const order = ['ping', 'down', 'up'];
+    const cur = order.indexOf(name), me = order.indexOf(n);
+    el.classList.toggle('active', me === cur);
+    el.classList.toggle('done', me < cur);
+    if (me < cur) bar.style.width = '100%';
+    else if (me > cur) bar.style.width = '0%';
+    else bar.style.width = (frac * 100).toFixed(1) + '%';
+  });
+  const [a, b] = PHASE_WEIGHT[name];
+  $('#totalPct').textContent = Math.round((a + (b - a) * frac) * 100) + '%';
+}
+function resetStages() {
+  $$('.stage').forEach((el) => { el.classList.remove('active', 'done'); el.querySelector('i').style.width = '0%'; });
+  $('#totalPct').textContent = '0%';
+}
+function liveMetric(name) { $$('.metric').forEach((m) => m.classList.toggle('live', m.id === 'mt-' + name)); }
+function setPhaseLabel(text, up) { const p = $('#gaugePhase'); p.textContent = text; p.classList.toggle('up', !!up); }
+
+function showAlert(title, text, info) {
+  $('#alertTitle').textContent = title; $('#alertText').textContent = text;
+  $('#alert').classList.toggle('info', !!info);
+  $('#alert').classList.add('show');
+}
+const hideAlert = () => $('#alert').classList.remove('show');
+
+function setButton(running) {
+  const b = $('#startBtn');
+  b.classList.toggle('running', running);
+  b.querySelector('span').textContent = running ? 'Остановить' : (state.history.length ? 'Запустить снова' : 'Начать тест');
+  b.querySelector('svg').innerHTML = running ? '<rect x="6" y="6" width="12" height="12" rx="2.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
+  // во время теста нельзя менять длительность
+  $$('[data-setting="duration"] button').forEach((x) => { x.disabled = running; });
+}
+
+function abortTest(reason) {
+  if (!state.run || state.run.aborted) return;
+  state.run.aborted = true; state.run.reason = reason;
+  abortAll();
+}
+
+async function startTest() {
+  if (state.run) { abortTest('Тест прерван'); return; }
+  hideAlert();
+  if (!navigator.onLine) { showAlert('Нет сети', 'Браузер сообщает, что подключения к интернету нет. Проверьте Wi-Fi или кабель и попробуйте снова.'); return; }
+
+  state.run = { aborted: false, reason: '', controllers: new Set(), xhrs: new Set() };
+  $('#result').classList.remove('show');
+  ['ping', 'jitter', 'down', 'up'].forEach((k) => { $('#v-' + k).textContent = '—'; });
+  resetStages(); setButton(true);
+  const dur = state.settings.duration * 1000;
+
+  try {
+    // ── 1. Пинг
+    gauge.mode = 'ping'; setGauge(0);
+    setStage('ping', 0); liveMetric('ping'); setPhaseLabel('пинг');
+    $('#gaugeUnit').textContent = 'мс'; $('#gaugeValue').textContent = '…';
+    const { ping, jitter } = await measurePing((p, f) => {
+      $('#gaugeValue').textContent = fmtMs(p); $('#v-ping').textContent = fmtMs(p); setStage('ping', f);
+    });
+    $('#v-ping').textContent = fmtMs(ping); $('#v-jitter').textContent = fmtMs(jitter);
+
+    // ── 2. Download
+    gauge.mode = 'down'; gauge.shown = 0;
+    setStage('down', 0); liveMetric('down'); setPhaseLabel('download'); $('#gaugeUnit').textContent = unitLabel();
+    const down = await measureDownload(dur, (s, f) => { setGauge(s); $('#v-down').textContent = fmtSpeed(s); setStage('down', f); });
+    $('#v-down').textContent = fmtSpeed(down);
+    setGauge(0); await sleep(450); checkAbort();
+
+    // ── 3. Upload
+    gauge.mode = 'up';
+    setStage('up', 0); liveMetric('up'); setPhaseLabel('upload', true);
+    const up = await measureUpload(dur, (s, f) => { setGauge(s); $('#v-up').textContent = fmtSpeed(s); setStage('up', f); });
+    $('#v-up').textContent = fmtSpeed(up);
+    setStage('up', 1); $$('.stage').forEach((el) => el.classList.add('done'));
+
+    // ── Итог
+    const rec = { date: new Date(), ping, jitter, down, up };
+    state.history.push(rec);
+    saveHistory();
+    gauge.mode = 'idle-speed'; setGauge(down);
+    setPhaseLabel('download · итог');
+    renderResult(rec);
+    renderHistory(); renderStats();
+  } catch (e) {
+    gauge.mode = 'idle'; setGauge(0);
+    $('#gaugeValue').textContent = '0'; $('#gaugeUnit').textContent = unitLabel();
+    resetStages();
+    if (e instanceof AbortedError) {
+      if (/сет/i.test(e.message)) { setPhaseLabel('нет сети'); showAlert('Нет сети', 'Подключение пропало во время замера. Как только интернет вернётся, запустите тест заново.'); }
+      else { setPhaseLabel('тест прерван'); showAlert('Тест прерван', 'Замер остановлен, результат не сохранён.', true); }
+    } else if (!navigator.onLine) {
+      setPhaseLabel('нет сети'); showAlert('Нет сети', 'Подключение к интернету пропало. Проверьте сеть и попробуйте снова.');
+    } else if (e instanceof NetError) {
+      setPhaseLabel('ошибка'); showAlert(e.message, e.text || '');
+    } else {
+      console.error(e);
+      setPhaseLabel('ошибка'); showAlert('Что-то пошло не так', 'Непредвиденная ошибка при замере: ' + (e && e.message ? e.message : e));
+    }
+  } finally {
+    abortAll();
+    state.run = null;
+    liveMetric(null); setButton(false);
+  }
+}
+$('#startBtn').addEventListener('click', startTest);
+window.addEventListener('offline', () => abortTest('Пропало подключение к сети'));
+// Если пользователь ушёл со вкладки браузера надолго — замер всё равно идёт; при закрытии всё отменится само.
+
+/* ---------- 6. ОЦЕНКА РЕЗУЛЬТАТА ---------- */
+const ICONS = {
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg>',
+  bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+};
+function evaluate(r) {
+  // Баллы 0–100: download 45, upload 25, пинг 20, джиттер 10
+  let score = Math.min(r.down / 100, 1) * 45 + Math.min(r.up / 30, 1) * 25;
+  score += r.ping <= 20 ? 20 : r.ping <= 50 ? 15 : r.ping <= 100 ? 8 : 3;
+  score += r.jitter <= 5 ? 10 : r.jitter <= 15 ? 7 : r.jitter <= 30 ? 4 : 1;
+  score = Math.round(score);
+  const grade = score >= 85 ? ['Отлично', 'Сеть летает: можно всё и сразу, хоть на нескольких устройствах.']
+    : score >= 65 ? ['Хорошо', 'Уверенный канал для дома: видео, игры и звонки без сюрпризов.']
+    : score >= 40 ? ['Средне', 'Для повседневных задач хватит, на тяжёлых сценариях может проседать.']
+    : ['Слабо', 'Канал узковат: базовый веб ок, а видео и звонки будут капризничать.'];
+
+  const v = [];
+  if (r.down >= 25) v.push(['ok', 'Хватит для 4K', 'Стриминг в 4K/HDR без буферизации']);
+  else if (r.down >= 10) v.push(['ok', 'Full HD без проблем', 'Для 4K скорости маловато']);
+  else if (r.down >= 5) v.push(['warn', 'HD-видео потянет', '1080p может подтормаживать']);
+  else v.push(['bad', 'Видео только в низком качестве', 'Для HD нужно от 5 Мбит/с']);
+
+  if (r.ping <= 40 && r.jitter <= 15) v.push(['ok', 'Подходит для онлайн-игр', `Пинг ${fmtMs(r.ping)} мс, стабильно`]);
+  else if (r.ping <= 80 && r.jitter <= 30) v.push(['warn', 'Игры: терпимо', 'Для соревновательных игр задержка великовата']);
+  else v.push(['bad', 'Для онлайн-игр не лучший вариант', 'Высокий или нестабильный пинг']);
+
+  if (r.up >= 3 && r.down >= 3 && r.ping <= 100) v.push(['ok', 'Видеозвонки в HD', 'Zoom, Meet, Телемост: всё ок']);
+  else if (r.up >= 1) v.push(['warn', 'Звонки потянет', 'Видео может снижать качество']);
+  else v.push(['bad', 'Видеозвонки будут тормозить', 'Upload ниже 1 Мбит/с']);
+
+  if (r.up >= 10) v.push(['ok', 'Можно вести стримы 1080p', 'И быстро выгружать файлы в облако']);
+  else if (r.up >= 4) v.push(['warn', 'Стрим в 720p', 'Для 1080p60 нужно от 8–10 Мбит/с']);
+  else v.push(['bad', 'Для своих стримов слабовато', 'Upload ниже 4 Мбит/с']);
+
+  return { score, grade, verdicts: v };
+}
+function renderResult(r) {
+  const ev = evaluate(r);
+  $('#gradeTitle').textContent = ev.grade[0];
+  $('#gradeText').textContent = ev.grade[1];
+  $('#gradeScore').textContent = ev.score;
+  $('#verdicts').innerHTML = ev.verdicts.map(([cls, t, s]) =>
+    `<div class="verdict ${cls}"><span class="ic">${ICONS[cls]}</span><div>${t}<small>${s}</small></div></div>`).join('');
+  const arc = $('#gradeArc');
+  arc.style.strokeDashoffset = 213.6;
+  $('#result').classList.add('show');
+  requestAnimationFrame(() => requestAnimationFrame(() => { arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100); }));
+}
+
+/* ---------- 7. ИСТОРИЯ, СТАТИСТИКА, ГРАФИКИ ---------- */
+const charts = {};
+const hasChart = () => typeof window.Chart !== 'undefined';
+const fmtDate = (d) => d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtTime = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const EMPTY = (title, text) => `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><b>${title}</b>${text}</div>`;
+
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function chartBase() {
+  const muted = cssVar('--muted'), line = cssVar('--line');
+  return {
+    responsive: true, maintainAspectRatio: false,
+    animation: { duration: 700, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: cssVar('--glass-strong') || '#0E2E27', titleColor: cssVar('--text'), bodyColor: cssVar('--text'),
+        borderColor: line, borderWidth: 1, padding: 12, cornerRadius: 12, boxPadding: 4,
+        titleFont: { family: 'Inter', weight: '600' }, bodyFont: { family: 'Space Grotesk' },
+        callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtNum(c.parsed.y)} ${unitLabel()}` },
+      },
+    },
+    scales: {
+      x: { grid: { display: false }, border: { color: line }, ticks: { color: muted, font: { family: 'Inter', size: 11 }, maxRotation: 0, autoSkip: true } },
+      y: { beginAtZero: true, grid: { color: line }, border: { display: false }, ticks: { color: muted, font: { family: 'Space Grotesk', size: 11 }, maxTicksLimit: 6 } },
+    },
+  };
+}
+function areaGradient(ctx, color) {
+  const g = ctx.createLinearGradient(0, 0, 0, 280);
+  g.addColorStop(0, color + '55'); g.addColorStop(1, color + '00');
+  return g;
+}
+function mountChart(key, boxId, canvasId, config) {
+  const box = $('#' + boxId);
+  if (!hasChart()) { box.innerHTML = EMPTY('Графики недоступны', 'Не загрузилась библиотека Chart.js (нужен интернет).'); return; }
+  if (charts[key]) { charts[key].destroy(); charts[key] = null; }
+  if (!state.history.length) { box.innerHTML = EMPTY('Пока пусто', 'Запустите первый тест, и здесь появится график.'); return; }
+  box.innerHTML = `<canvas id="${canvasId}"></canvas>`;
+  charts[key] = new Chart($('#' + canvasId).getContext('2d'), config());
+}
+
+function renderHistory() {
+  const h = state.history;
+  // таблица (свежие сверху)
+  $('#historyTable').innerHTML = !h.length ? EMPTY('Замеров ещё не было', 'Результаты каждого теста будут появляться здесь.') :
+    `<div class="table-wrap"><table><thead><tr><th>Дата</th><th>Пинг</th><th>Джиттер</th><th>Download</th><th>Upload</th><th></th></tr></thead><tbody>` +
+    h.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => `<tr>
+      <td class="c-date">${fmtDate(r.date)}</td>
+      <td>${fmtMs(r.ping)} <span style="color:var(--muted)">мс</span></td>
+      <td>${fmtMs(r.jitter)} <span style="color:var(--muted)">мс</span></td>
+      <td class="c-down">${fmtSpeed(r.down)} <span style="color:var(--muted);font-weight:400">${unitLabel()}</span></td>
+      <td class="c-up">${fmtSpeed(r.up)} <span style="color:var(--muted);font-weight:400">${unitLabel()}</span></td>
+      <td>${i === h.length - 1 ? '<span class="badge">последний</span>' : ''}</td></tr>`).join('') +
+    `</tbody></table></div>`;
+  $('#clearBtn').style.display = h.length ? '' : 'none';
+
+  mountChart('history', 'historyChartBox', 'historyChart', () => {
+    const ctx = document.getElementById('historyChart').getContext('2d');
+    const ds = (label, key, color) => ({
+      label, data: h.map((r) => toUnit(r[key])), borderColor: color, backgroundColor: areaGradient(ctx, color),
+      fill: true, tension: .38, borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6,
+      pointBackgroundColor: color, pointBorderColor: cssVar('--bg'), pointBorderWidth: 2,
+    });
+    return { type: 'line', data: { labels: h.map((r) => fmtTime(r.date)), datasets: [ds('Download', 'down', C.apricot), ds('Upload', 'up', C.lavender)] }, options: chartBase() };
+  });
+}
+
+function renderStats() {
+  const h = state.history;
+  const grid = $('#statGrid');
+  if (!h.length) {
+    grid.innerHTML = `<div class="card" style="grid-column:1/-1">${EMPTY('Статистики пока нет', 'Нужен хотя бы один замер.')}</div>`;
+  } else {
+    const agg = (k) => { const a = h.map((r) => r[k]); return { avg: a.reduce((s, x) => s + x, 0) / a.length, max: Math.max(...a), min: Math.min(...a) }; };
+    const d = agg('down'), u = agg('up'), p = agg('ping'), j = agg('jitter');
+    const u_ = unitLabel();
+    grid.innerHTML = `
+      <div class="card stat s-down"><div class="metric-label m-down"><i style="background:var(--apricot)"></i>Download · среднее</div>
+        <div class="stat-main">${fmtSpeed(d.avg)}<small>${u_}</small></div>
+        <div class="stat-sub"><div>Лучший<b>${fmtSpeed(d.max)}</b></div><div style="text-align:right">Худший<b>${fmtSpeed(d.min)}</b></div></div></div>
+      <div class="card stat s-up"><div class="metric-label"><i style="background:var(--lavender)"></i>Upload · среднее</div>
+        <div class="stat-main">${fmtSpeed(u.avg)}<small>${u_}</small></div>
+        <div class="stat-sub"><div>Лучший<b>${fmtSpeed(u.max)}</b></div><div style="text-align:right">Худший<b>${fmtSpeed(u.min)}</b></div></div></div>
+      <div class="card stat"><div class="metric-label"><i></i>Пинг · среднее</div>
+        <div class="stat-main">${fmtMs(p.avg)}<small>мс</small></div>
+        <div class="stat-sub"><div>Лучший<b>${fmtMs(p.min)}</b></div><div style="text-align:right">Худший<b>${fmtMs(p.max)}</b></div></div></div>
+      <div class="card stat"><div class="metric-label"><i></i>Джиттер · среднее</div>
+        <div class="stat-main">${fmtMs(j.avg)}<small>мс</small></div>
+        <div class="stat-sub"><div>Замеров<b>${h.length}</b></div><div style="text-align:right">Лучший<b>${fmtMs(j.min)}</b></div></div></div>`;
+  }
+  mountChart('stats', 'statsChartBox', 'statsChart', () => ({
+    type: 'bar',
+    data: {
+      labels: h.map((r, i) => `#${i + 1} · ${fmtTime(r.date)}`),
+      datasets: [
+        { label: 'Download', data: h.map((r) => toUnit(r.down)), backgroundColor: C.apricot, borderRadius: 8, maxBarThickness: 34 },
+        { label: 'Upload', data: h.map((r) => toUnit(r.up)), backgroundColor: C.lavender, borderRadius: 8, maxBarThickness: 34 },
+      ],
+    },
+    options: chartBase(),
+  }));
+}
+
+// Очистка истории: двойной клик-подтверждение без системных диалогов
+let clearArmed = null;
+$('#clearBtn').addEventListener('click', (e) => {
+  const b = e.currentTarget;
+  if (!clearArmed) {
+    b.textContent = 'Точно очистить?'; b.classList.add('danger');
+    clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Очистить историю'; b.classList.remove('danger'); }, 3000);
+    return;
+  }
+  clearTimeout(clearArmed); clearArmed = null;
+  b.textContent = 'Очистить историю'; b.classList.remove('danger');
+  state.history = [];
+  saveHistory();
+  renderHistory(); renderStats(); setButton(!!state.run);
+});
+
+/* ---------- 8. ВКЛАДКИ И НАСТРОЙКИ ---------- */
+function showTab(name) {
+  $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+  $$('.tab').forEach((t) => t.classList.toggle('active', t.id === 'tab-' + name));
+  // Chart.js не умеет считать размер скрытого canvas — перерисуем при показе
+  if (name === 'history') renderHistory();
+  if (name === 'stats') renderStats();
+  if (history.replaceState) history.replaceState(null, '', '#' + name);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$$('#tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
+$$('[data-goto]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); showTab(a.dataset.goto); }));
+
+function applySettings() {
+  const s = state.settings;
+  document.documentElement.setAttribute('data-theme', s.theme);
+  document.querySelector('meta[name="theme-color"]').setAttribute('content', s.theme === 'light' ? '#F4EFE6' : '#08201B');
+  $$('.seg').forEach((seg) => {
+    const key = seg.dataset.setting;
+    seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', String(s[key]) === b.dataset.value));
+  });
+  $$('.unit-label').forEach((el) => { el.textContent = unitLabel(); });
+  if (gauge.mode !== 'ping') $('#gaugeUnit').textContent = unitLabel();
+  drawTicks();
+  // перерисуем значения в единицах
+  const last = state.history[state.history.length - 1];
+  if (last && !state.run) { $('#v-down').textContent = fmtSpeed(last.down); $('#v-up').textContent = fmtSpeed(last.up); }
+  renderHistory(); renderStats();
+}
+$$('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b || b.disabled) return;
+  const key = seg.dataset.setting;
+  state.settings[key] = key === 'duration' ? Number(b.dataset.value) : b.dataset.value;
+  saveSettings(); applySettings();
+}));
+
+/* Информация о ближайшем узле Cloudflare (не обязательна для теста) */
+async function loadMeta() {
+  try {
+    const r = await fetch(BASE + '/meta', { cache: 'no-store' });
+    if (!r.ok) throw 0;
+    const m = await r.json();
+    const where = [m.city, m.colo].filter(Boolean).join(' · ');
+    $('#serverText').innerHTML = `Узел <b>${where || 'Cloudflare'}</b>${m.asOrganization ? ' · ' + m.asOrganization.replace(/[<>&]/g, '') : ''}`;
+    $('#serverDot').className = 'dot ok';
+  } catch (e) {
+    $('#serverText').innerHTML = navigator.onLine ? 'Сервер: <b>Cloudflare</b>' : '<b>Нет сети</b>';
+    $('#serverDot').className = 'dot' + (navigator.onLine ? '' : ' bad');
+  }
+}
+window.addEventListener('online', loadMeta);
+window.addEventListener('offline', () => { $('#serverText').innerHTML = '<b>Нет сети</b>'; $('#serverDot').className = 'dot bad'; });
+
+/* ---------- СТАРТ ---------- */
+$('#headerLogo').innerHTML = window.ZEPHYR_LOGO('zhead');
+buildGauge();
+applySettings();
+setButton(false);
+requestAnimationFrame(gaugeLoop);
+loadMeta();
+const initial = location.hash.slice(1);
+if (['history', 'stats', 'guide', 'settings'].includes(initial)) showTab(initial);
+</script>
+</body>
+</html>
