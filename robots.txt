@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zephyr-speed.github.io/sitemap.xml

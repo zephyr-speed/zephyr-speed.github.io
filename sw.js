@@ -1,7 +1,7 @@
 /* ZEPHYR · service worker
    Офлайн-режим: страница, иконки, шрифты и Chart.js кэшируются.
    Замеры скорости и счётчик НИКОГДА не кэшируются — идут только в сеть. */
-const VERSION = 'zephyr-v2';
+const VERSION = 'zephyr-v3';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 const STATIC_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

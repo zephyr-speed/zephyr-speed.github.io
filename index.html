@@ -3,15 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>ZEPHYR — тест скорости интернета</title>
-<meta name="description" content="ZEPHYR — быстрый и честный тест скорости интернета: пинг, джиттер, пинг под нагрузкой, download и upload.">
+<title>Тест скорости интернета онлайн — ZEPHYR: пинг, download, upload</title>
+<meta name="description" content="Бесплатный тест скорости интернета онлайн: проверьте download, upload, пинг, джиттер и пинг под нагрузкой (bufferbloat). Без регистрации и рекламы — узнайте, хватит ли на 4K, игры и видеозвонки.">
+<link rel="canonical" href="https://zephyr-speed.github.io/">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZEPHYR">
+<meta property="og:url" content="https://zephyr-speed.github.io/">
+<meta property="og:image" content="https://zephyr-speed.github.io/og-image.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="ru_RU">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://zephyr-speed.github.io/og-image.jpg">
+<script type="application/ld+json">[{"@context": "https://schema.org", "@type": "WebApplication", "name": "ZEPHYR", "alternateName": "ZEPHYR — тест скорости интернета", "url": "https://zephyr-speed.github.io/", "description": "Бесплатный тест скорости интернета онлайн: download, upload, пинг, джиттер и пинг под нагрузкой.", "applicationCategory": "UtilitiesApplication", "operatingSystem": "Any", "inLanguage": ["ru", "en"], "offers": {"@type": "Offer", "price": "0", "priceCurrency": "RUB"}, "image": "https://zephyr-speed.github.io/og-image.jpg"}, {"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Как проверить скорость интернета?", "acceptedAnswer": {"@type": "Answer", "text": "Откройте ZEPHYR и нажмите «Начать тест». За 20–30 секунд сервис измерит пинг, джиттер, скорость загрузки и отдачи, а также пинг под нагрузкой, и покажет понятную оценку соединения."}}, {"@type": "Question", "name": "Какая скорость интернета считается нормальной?", "acceptedAnswer": {"@type": "Answer", "text": "Для одного человека хватает 25–50 Мбит/с: этого достаточно для видео в 4K и онлайн-игр. Для семьи с несколькими устройствами комфортно от 100 Мбит/с. Для видеозвонков и стримов важен upload — от 3–10 Мбит/с."}}, {"@type": "Question", "name": "Какой пинг нормальный для игр?", "acceptedAnswer": {"@type": "Answer", "text": "До 40 мс — отлично для любых онлайн-игр, 40–80 мс — играть можно, выше 100 мс заметны задержки. Важна и стабильность: джиттер лучше держать до 15 мс."}}, {"@type": "Question", "name": "Что такое пинг под нагрузкой (bufferbloat)?", "acceptedAnswer": {"@type": "Answer", "text": "Это задержка, пока канал забит загрузкой. Если она сильно растёт, игры и звонки начинают лагать, как только кто-то дома качает файлы или смотрит видео. ZEPHYR измеряет её отдельно и ставит оценку от A+ до F."}}, {"@type": "Question", "name": "Почему скорость ниже, чем в тарифе провайдера?", "acceptedAnswer": {"@type": "Answer", "text": "На результат влияют Wi-Fi (стены, расстояние до роутера, помехи), загрузка сети, другие устройства и VPN. Для самого точного замера подключитесь кабелем и закройте загрузки."}}, {"@type": "Question", "name": "Это бесплатно? Нужна регистрация?", "acceptedAnswer": {"@type": "Answer", "text": "ZEPHYR полностью бесплатный и работает без регистрации. История ваших замеров хранится только в вашем браузере и никуда не отправляется."}}]}]</script>
 <meta name="theme-color" content="#08201B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ZEPHYR">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta property="og:title" content="ZEPHYR — тест скорости интернета">
-<meta property="og:description" content="Скорость, которую видно">
+<meta property="og:title" content="ZEPHYR — тест скорости интернета онлайн">
+<meta property="og:description" content="Скорость, пинг и пинг под нагрузкой за 30 секунд. Без регистрации и рекламы.">
 
 <!-- Иконки и манифест: на хостинге берутся файлами, локально генерируются из SVG-логотипа -->
 <link rel="icon" href="favicon.ico" sizes="48x48">
@@ -406,6 +418,16 @@ td.c-srv { font-size: 12.5px; }
 #installRow { display: none; }
 #installRow.show { display: flex; }
 
+.faq details { border-top: 1px solid var(--line); padding: 14px 0; }
+.faq details:first-of-type { border-top: 0; }
+.faq summary { cursor: pointer; font-weight: 600; font-size: 15px; color: var(--text); list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; color: var(--apricot); font-family: var(--font-num); font-size: 20px; line-height: 1; }
+.faq details[open] summary::after { content: '–'; }
+.faq details p { margin: 10px 0 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.about { margin: 56px auto 0; max-width: 760px; text-align: center; }
+.about h2 { font-size: 18px; margin-bottom: 10px; }
+.about p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; }
 footer.foot { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.8; }
 footer.foot a { color: inherit; }
 .counters { display: none; justify-content: center; gap: 18px; margin-bottom: 8px; font-size: 13px; }
@@ -464,25 +486,25 @@ footer.foot a { color: inherit; }
     <a class="brand" href="#" data-goto="test" aria-label="ZEPHYR">
       <div class="logo" id="headerLogo"></div>
       <div>
-        <div class="brand-name">ZEPHYR</div>
-        <div class="brand-tag" data-i18n="slogan"></div>
+        <h1 class="brand-name">ZEPHYR</h1>
+        <div class="brand-tag" data-i18n="slogan">Скорость, которую видно</div>
       </div>
     </a>
     <div class="top-right">
-      <div class="chip server-chip" id="serverChip"><i class="dot" id="serverDot"></i><span id="serverText"></span></div>
+      <div class="chip server-chip" id="serverChip"><i class="dot" id="serverDot"></i><span id="serverText">Ищем ближайший узел…</span></div>
       <button class="lang-btn" id="langBtn" aria-label="Language">EN</button>
     </div>
   </header>
 
-  <div class="offline-banner" id="offlineBanner" data-i18n="offline.banner"></div>
+  <div class="offline-banner" id="offlineBanner" data-i18n="offline.banner">Вы офлайн: сайт открыт из кэша. Тест заработает, когда вернётся интернет.</div>
 
   <!-- ============ НАВИГАЦИЯ ============ -->
   <nav class="tabs" id="tabs">
-    <button class="active" data-tab="test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><span data-i18n="tab.test"></span></button>
-    <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span data-i18n="tab.history"></span></button>
-    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span data-i18n="tab.stats"></span></button>
-    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 0 7.5 23H19"/></svg><span class="lg" data-i18n="tab.guide"></span><span class="sm" data-i18n="tab.guideShort"></span></button>
-    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-i18n="tab.settings"></span></button>
+    <button class="active" data-tab="test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><span data-i18n="tab.test">Тест</span></button>
+    <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span data-i18n="tab.history">История</span></button>
+    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span data-i18n="tab.stats">Статистика</span></button>
+    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 0 7.5 23H19"/></svg><span class="lg" data-i18n="tab.guide">Что значат цифры</span><span class="sm" data-i18n="tab.guideShort">Гайд</span></button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-i18n="tab.settings">Настройки</span></button>
   </nav>
 
   <main>
@@ -516,8 +538,8 @@ footer.foot a { color: inherit; }
             </svg>
             <div class="gauge-center" aria-live="polite">
               <div class="gauge-value" id="gaugeValue">0</div>
-              <div class="gauge-unit" id="gaugeUnit"></div>
-              <div class="gauge-phase" id="gaugePhase"></div>
+              <div class="gauge-unit" id="gaugeUnit">Мбит/с</div>
+              <div class="gauge-phase" id="gaugePhase">готов к замеру</div>
             </div>
           </div>
           <!-- живой график скорости -->
@@ -527,32 +549,32 @@ footer.foot a { color: inherit; }
           </div>
           <button class="start-btn" id="startBtn">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
-            <span></span>
+            <span>Начать тест</span>
           </button>
         </div>
 
         <div>
           <div class="card">
-            <div class="card-title"><span data-i18n="progress.title"></span> <span class="num" id="totalPct" style="letter-spacing:0">0%</span></div>
+            <div class="card-title"><span data-i18n="progress.title">Ход замера</span> <span class="num" id="totalPct" style="letter-spacing:0">0%</span></div>
             <div class="stages">
-              <div class="stage" id="st-ping"><span data-i18n="m.ping"></span><div class="bar"><i></i></div></div>
+              <div class="stage" id="st-ping"><span data-i18n="m.ping">Пинг</span><div class="bar"><i></i></div></div>
               <div class="stage" id="st-down"><span>Download</span><div class="bar"><i></i></div></div>
               <div class="stage s-up" id="st-up"><span>Upload</span><div class="bar"><i></i></div></div>
             </div>
             <div class="metrics" style="margin-top:22px">
-              <div class="metric m-ping" id="mt-ping"><div class="metric-label"><i></i><span data-i18n="m.ping"></span></div><div class="metric-value"><span id="v-ping">—</span><small class="ms-label"></small></div></div>
-              <div class="metric m-jitter" id="mt-jitter"><div class="metric-label"><i></i><span data-i18n="m.jitter"></span></div><div class="metric-value"><span id="v-jitter">—</span><small class="ms-label"></small></div></div>
-              <div class="metric m-down" id="mt-down"><div class="metric-label"><i></i>Download</div><div class="metric-value"><span id="v-down">—</span><small class="unit-label"></small></div></div>
-              <div class="metric m-up" id="mt-up"><div class="metric-label"><i></i>Upload</div><div class="metric-value"><span id="v-up">—</span><small class="unit-label"></small></div></div>
+              <div class="metric m-ping" id="mt-ping"><div class="metric-label"><i></i><span data-i18n="m.ping">Пинг</span></div><div class="metric-value"><span id="v-ping">—</span><small class="ms-label">мс</small></div></div>
+              <div class="metric m-jitter" id="mt-jitter"><div class="metric-label"><i></i><span data-i18n="m.jitter">Джиттер</span></div><div class="metric-value"><span id="v-jitter">—</span><small class="ms-label">мс</small></div></div>
+              <div class="metric m-down" id="mt-down"><div class="metric-label"><i></i>Download</div><div class="metric-value"><span id="v-down">—</span><small class="unit-label">Мбит/с</small></div></div>
+              <div class="metric m-up" id="mt-up"><div class="metric-label"><i></i>Upload</div><div class="metric-value"><span id="v-up">—</span><small class="unit-label">Мбит/с</small></div></div>
               <!-- нагруженный пинг (bufferbloat) -->
               <div class="metric wide" id="mt-loaded">
                 <div>
-                  <div class="metric-label"><i style="background:linear-gradient(135deg,var(--apricot),var(--lavender))"></i><span data-i18n="m.loaded"></span></div>
+                  <div class="metric-label"><i style="background:linear-gradient(135deg,var(--apricot),var(--lavender))"></i><span data-i18n="m.loaded">Пинг под нагрузкой</span></div>
                   <div class="loaded-vals" style="margin-top:10px">
-                    <span class="ld">↓ <span id="v-ld">—</span><small class="ms-label"></small></span>
-                    <span class="lu">↑ <span id="v-lu">—</span><small class="ms-label"></small></span>
+                    <span class="ld">↓ <span id="v-ld">—</span><small class="ms-label">мс</small></span>
+                    <span class="lu">↑ <span id="v-lu">—</span><small class="ms-label">мс</small></span>
                   </div>
-                  <div class="metric-hint" data-i18n="m.loadedHint"></div>
+                  <div class="metric-hint" data-i18n="m.loadedHint">Насколько растёт задержка, когда канал забит загрузкой</div>
                 </div>
                 <div class="bb-grade" id="bbGrade" title="Bufferbloat">—</div>
               </div>
@@ -581,8 +603,8 @@ footer.foot a { color: inherit; }
             <p id="gradeText"></p>
           </div>
           <div class="share-row">
-            <button class="share-btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg><span data-i18n="result.share"></span></button>
-            <button class="share-btn ghost" id="saveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-i18n="result.save"></span></button>
+            <button class="share-btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg><span data-i18n="result.share">Поделиться</span></button>
+            <button class="share-btn ghost" id="saveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-i18n="result.save">Скачать картинку</span></button>
           </div>
         </div>
         <div class="verdicts" id="verdicts"></div>
@@ -594,16 +616,16 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-history">
       <div class="section-head">
-        <h2 data-i18n="history.title"></h2>
-        <p data-i18n="history.desc"></p>
+        <h2 data-i18n="history.title">История замеров</h2>
+        <p data-i18n="history.desc">Ваши замеры хранятся только в этом браузере на этом устройстве. Регистрация не нужна, другие посетители вашу историю не видят.</p>
       </div>
       <div class="stack">
         <div class="card">
-          <div class="card-title"><span data-i18n="history.trend"></span><span class="legend"><span style="color:var(--apricot)">●</span> download &nbsp; <span style="color:var(--lavender)">●</span> upload</span></div>
+          <div class="card-title"><span data-i18n="history.trend">Динамика</span><span class="legend"><span style="color:var(--apricot)">●</span> download &nbsp; <span style="color:var(--lavender)">●</span> upload</span></div>
           <div class="chart-box" id="historyChartBox"></div>
         </div>
         <div class="card">
-          <div class="card-title"><span data-i18n="history.all"></span> <button class="ghost-btn" id="clearBtn" data-i18n="history.clear"></button></div>
+          <div class="card-title"><span data-i18n="history.all">Все замеры</span> <button class="ghost-btn" id="clearBtn" data-i18n="history.clear">Очистить историю</button></div>
           <div id="historyTable"></div>
         </div>
       </div>
@@ -614,13 +636,13 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-stats">
       <div class="section-head">
-        <h2 data-i18n="stats.title"></h2>
-        <p data-i18n="stats.desc"></p>
+        <h2 data-i18n="stats.title">Статистика</h2>
+        <p data-i18n="stats.desc">Средние, лучшие и худшие значения по всем вашим замерам на этом устройстве.</p>
       </div>
       <div class="stack">
         <div class="stat-grid" id="statGrid"></div>
         <div class="card">
-          <div class="card-title"><span data-i18n="history.all"></span><span class="legend"><span style="color:var(--apricot)">■</span> download &nbsp; <span style="color:var(--lavender)">■</span> upload</span></div>
+          <div class="card-title"><span data-i18n="history.all">Все замеры</span><span class="legend"><span style="color:var(--apricot)">■</span> download &nbsp; <span style="color:var(--lavender)">■</span> upload</span></div>
           <div class="chart-box" id="statsChartBox"></div>
         </div>
       </div>
@@ -631,14 +653,26 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-guide">
       <div class="section-head">
-        <h2 data-i18n="guide.title"></h2>
-        <p data-i18n="guide.desc"></p>
+        <h2 data-i18n="guide.title">Что значат цифры</h2>
+        <p data-i18n="guide.desc">Коротко о том, на что смотреть в результатах и какая скорость нужна под конкретные задачи. Значения ориентировочные, на одно устройство.</p>
       </div>
-      <div class="card terms" id="guideTerms"></div>
-      <div class="guide-grid" id="guideGrid"></div>
+      <div class="card terms" id="guideTerms"><div class="term"><b>Пинг</b><p>Время, за которое сигнал доходит до сервера и обратно. Чем меньше, тем отзывчивее сеть.</p></div><div class="term"><b>Джиттер</b><p>Насколько скачет пинг. Высокий джиттер даёт рывки в играх и «робота» в звонках.</p></div><div class="term"><b>Под нагрузкой</b><p>Пинг, пока канал забит закачкой. Если он сильно растёт (bufferbloat), игры лагают, когда кто-то дома качает.</p></div><div class="term"><b>Download</b><p>Скорость получения данных: видео, сайты, загрузки, обновления игр.</p></div><div class="term"><b>Upload</b><p>Скорость отправки: видеосвязь, стримы, выгрузка файлов в облако.</p></div></div>
+      <div class="guide-grid" id="guideGrid">
+    <div class="card guide-card"><h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"></rect><path d="M8 21h8"></path></svg></span>Стриминг видео</h3><p>Смотрим download. Если дома несколько экранов, скорости складываются.</p>
+      <ul class="req"><li>SD (480p)<b>от 3 Мбит/с</b></li><li>HD (720p)<b>от 5 Мбит/с</b></li><li>Full HD (1080p)<b>от 10 Мбит/с</b></li><li>4K / HDR<b>от 25 Мбит/с</b></li></ul></div>
+    <div class="card guide-card"><h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 9.5v.01M17.5 11v.01"></path><path d="M7 5h10a4 4 0 0 1 4 4v4.5a3.5 3.5 0 0 1-6 2.4L13.5 14h-3L9 15.9a3.5 3.5 0 0 1-6-2.4V9a4 4 0 0 1 4-4z"></path></svg></span>Онлайн-игры</h3><p>Для игр скорость вторична: важны пинг, его стабильность и поведение под нагрузкой.</p>
+      <ul class="req"><li>Пинг: комфортно<b>до 40 мс</b></li><li>Пинг: терпимо<b>40–80 мс</b></li><li>Джиттер<b>до 15 мс</b></li><li>Рост под нагрузкой<b>до +30 мс</b></li></ul></div>
+    <div class="card guide-card"><h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"></rect><path d="M16 10.5l5-3v9l-5-3z"></path></svg></span>Видеозвонки</h3><p>Здесь работает и upload: вы ведь тоже отправляете видео.</p>
+      <ul class="req"><li>Голосовой звонок<b>от 0,5 Мбит/с</b></li><li>Видео 1-на-1 в HD<b>от 1,5–3 Мбит/с</b></li><li>Групповой созвон<b>от 3–4 Мбит/с</b></li><li>Пинг<b>до 100 мс</b></li></ul></div>
+    <div class="card guide-card"><h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"></path></svg></span>Свои стримы и облако</h3><p>Для трансляций и бэкапов решает upload. Берите запас ~30%.</p>
+      <ul class="req"><li>Стрим 720p30<b>от 4 Мбит/с</b></li><li>Стрим 1080p60<b>от 8–10 Мбит/с</b></li><li>Стрим 4K<b>от 25 Мбит/с</b></li><li>1 ГБ в облако при 50 Мбит/с<b>≈ 3 мин</b></li></ul></div></div>
       <div class="card" style="margin-top:20px">
-        <div class="card-title" style="margin-bottom:10px" data-i18n="guide.unitsTitle"></div>
-        <p style="margin:0;color:var(--muted);line-height:1.6;font-size:14.5px" data-i18n="guide.unitsText"></p>
+        <div class="card-title" style="margin-bottom:10px" data-i18n="guide.unitsTitle">Мбит/с или МБ/с?</div>
+        <p style="margin:0;color:var(--muted);line-height:1.6;font-size:14.5px" data-i18n="guide.unitsText">Провайдеры пишут скорость в мегабитах (Мбит/с), а браузер и торренты показывают мегабайты (МБ/с). В одном байте 8 бит, так что 100 Мбит/с ≈ 12,5 МБ/с. Переключить единицы можно в настройках.</p>
+      </div>
+      <div class="card faq" style="margin-top:20px">
+        <h2 class="card-title" style="margin-bottom:6px" data-i18n="faq.title">Частые вопросы</h2>
+        <div id="faqList"><details><summary>Как проверить скорость интернета?</summary><p>Откройте ZEPHYR и нажмите «Начать тест». За 20–30 секунд сервис измерит пинг, джиттер, скорость загрузки и отдачи, а также пинг под нагрузкой, и покажет понятную оценку соединения.</p></details><details><summary>Какая скорость интернета считается нормальной?</summary><p>Для одного человека хватает 25–50 Мбит/с: этого достаточно для видео в 4K и онлайн-игр. Для семьи с несколькими устройствами комфортно от 100 Мбит/с. Для видеозвонков и стримов важен upload — от 3–10 Мбит/с.</p></details><details><summary>Какой пинг нормальный для игр?</summary><p>До 40 мс — отлично для любых онлайн-игр, 40–80 мс — играть можно, выше 100 мс заметны задержки. Важна и стабильность: джиттер лучше держать до 15 мс.</p></details><details><summary>Что такое пинг под нагрузкой (bufferbloat)?</summary><p>Это задержка, пока канал забит загрузкой. Если она сильно растёт, игры и звонки начинают лагать, как только кто-то дома качает файлы или смотрит видео. ZEPHYR измеряет её отдельно и ставит оценку от A+ до F.</p></details><details><summary>Почему скорость ниже, чем в тарифе провайдера?</summary><p>На результат влияют Wi-Fi (стены, расстояние до роутера, помехи), загрузка сети, другие устройства и VPN. Для самого точного замера подключитесь кабелем и закройте загрузки.</p></details><details><summary>Это бесплатно? Нужна регистрация?</summary><p>ZEPHYR полностью бесплатный и работает без регистрации. История ваших замеров хранится только в вашем браузере и никуда не отправляется.</p></details></div>
       </div>
     </section>
 
@@ -647,46 +681,51 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-settings">
       <div class="section-head">
-        <h2 data-i18n="settings.title"></h2>
-        <p data-i18n="settings.desc"></p>
+        <h2 data-i18n="settings.title">Настройки</h2>
+        <p data-i18n="settings.desc">Под себя: язык, единицы, длительность, сервер, звук и тема.</p>
       </div>
       <div class="card settings">
         <div class="setting">
-          <div><h3 data-i18n="set.lang"></h3><p data-i18n="set.langHint"></p></div>
+          <div><h3 data-i18n="set.lang">Язык</h3><p data-i18n="set.langHint">Язык интерфейса сайта.</p></div>
           <div class="seg" data-setting="lang"><button data-value="ru">Русский</button><button data-value="en">English</button></div>
         </div>
         <div class="setting">
-          <div><h3 data-i18n="set.unit"></h3><p data-i18n="set.unitHint"></p></div>
-          <div class="seg" data-setting="unit"><button data-value="mbps" data-i18n="unit.mbps"></button><button data-value="MBps" data-i18n="unit.MBps"></button></div>
+          <div><h3 data-i18n="set.unit">Единицы скорости</h3><p data-i18n="set.unitHint">Мегабиты, как у провайдера, или мегабайты, как в браузере.</p></div>
+          <div class="seg" data-setting="unit"><button data-value="mbps" data-i18n="unit.mbps">Мбит/с</button><button data-value="MBps" data-i18n="unit.MBps">МБ/с</button></div>
         </div>
         <div class="setting">
-          <div><h3 data-i18n="set.duration"></h3><p data-i18n="set.durationHint"></p></div>
-          <div class="seg" data-setting="duration"><button data-value="6" data-i18n="set.s6"></button><button data-value="10" data-i18n="set.s10"></button><button data-value="15" data-i18n="set.s15"></button></div>
+          <div><h3 data-i18n="set.duration">Длительность теста</h3><p data-i18n="set.durationHint">Время на каждый этап (download и upload). Дольше значит точнее, особенно на быстрых каналах.</p></div>
+          <div class="seg" data-setting="duration"><button data-value="6" data-i18n="set.s6">6 с</button><button data-value="10" data-i18n="set.s10">10 с</button><button data-value="15" data-i18n="set.s15">15 с</button></div>
         </div>
         <div class="setting">
-          <div><h3 data-i18n="set.server"></h3><p data-i18n="set.serverHint"></p></div>
-          <div class="seg" data-setting="server"><button data-value="auto" data-i18n="set.auto"></button><button data-value="cf">Cloudflare</button><button data-value="ls">LibreSpeed</button></div>
+          <div><h3 data-i18n="set.server">Сервер замера</h3><p data-i18n="set.serverHint">Авто: Cloudflare, а если он недоступен, ближайший сервер LibreSpeed.</p></div>
+          <div class="seg" data-setting="server"><button data-value="auto" data-i18n="set.auto">Авто</button><button data-value="cf">Cloudflare</button><button data-value="ls">LibreSpeed</button></div>
         </div>
         <div class="setting">
-          <div><h3 data-i18n="set.sound"></h3><p data-i18n="set.soundHint"></p></div>
-          <div class="seg" data-setting="sound"><button data-value="on" data-i18n="set.on"></button><button data-value="off" data-i18n="set.off"></button></div>
+          <div><h3 data-i18n="set.sound">Звук и вибрация</h3><p data-i18n="set.soundHint">Мягкий сигнал и вибрация на телефоне в конце замера.</p></div>
+          <div class="seg" data-setting="sound"><button data-value="on" data-i18n="set.on">Вкл</button><button data-value="off" data-i18n="set.off">Выкл</button></div>
         </div>
         <div class="setting">
-          <div><h3 data-i18n="set.theme"></h3><p data-i18n="set.themeHint"></p></div>
-          <div class="seg" data-setting="theme"><button data-value="dark" data-i18n="set.dark"></button><button data-value="light" data-i18n="set.light"></button></div>
+          <div><h3 data-i18n="set.theme">Тема</h3><p data-i18n="set.themeHint">Тёмная изумрудная или светлая песочная.</p></div>
+          <div class="seg" data-setting="theme"><button data-value="dark" data-i18n="set.dark">Тёмная</button><button data-value="light" data-i18n="set.light">Светлая</button></div>
         </div>
         <div class="setting" id="installRow">
-          <div><h3 data-i18n="set.install"></h3><p data-i18n="set.installHint"></p></div>
-          <button class="share-btn" id="installBtn"><span data-i18n="set.installBtn"></span></button>
+          <div><h3 data-i18n="set.install">Приложение</h3><p data-i18n="set.installHint">Установите ZEPHYR на рабочий стол или главный экран: откроется в своём окне и работает офлайн.</p></div>
+          <button class="share-btn" id="installBtn"><span data-i18n="set.installBtn">Установить</span></button>
         </div>
       </div>
     </section>
   </main>
 
+  <section class="about">
+    <h2 data-i18n="about.title">Тест скорости интернета онлайн</h2>
+    <p data-i18n="about.text">ZEPHYR — бесплатный тест скорости интернета прямо в браузере. Он измеряет скорость загрузки (download) и отдачи (upload), пинг, джиттер и пинг под нагрузкой — показатель, который объясняет лаги в играх и видеозвонках. Работает на компьютере и телефоне, без регистрации и рекламы, а история замеров хранится только в вашем браузере.</p>
+  </section>
+
   <footer class="foot">
-    <div class="counters" id="counters"><span><span data-i18n="foot.visits"></span>: <b id="cVisits">—</b></span><span><span data-i18n="foot.tests"></span>: <b id="cTests">—</b></span></div>
-    <div data-i18n="foot.text"></div>
-    ZEPHYR · <span data-i18n="slogan"></span>
+    <div class="counters" id="counters"><span><span data-i18n="foot.visits">Посещений</span>: <b id="cVisits">—</b></span><span><span data-i18n="foot.tests">Тестов проведено</span>: <b id="cTests">—</b></span></div>
+    <div data-i18n="foot.text">Замеры идут через публичные серверы <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a> и <a href="https://librespeed.org" target="_blank" rel="noopener">LibreSpeed</a>.</div>
+    ZEPHYR · <span data-i18n="slogan">Скорость, которую видно</span>
   </footer>
 </div>
 
@@ -706,7 +745,7 @@ footer.foot a { color: inherit; }
 /* ---------- 1. СЛОВАРЬ ---------- */
 const STR = {
   ru: {
-    title: 'ZEPHYR — тест скорости интернета', slogan: 'Скорость, которую видно',
+    title: 'Тест скорости интернета онлайн — ZEPHYR: пинг, download, upload', slogan: 'Скорость, которую видно',
     'tab.test': 'Тест', 'tab.history': 'История', 'tab.stats': 'Статистика', 'tab.guide': 'Что значат цифры', 'tab.guideShort': 'Гайд', 'tab.settings': 'Настройки',
     'server.searching': 'Ищем ближайший узел…', 'server.node': 'Узел', 'server.offline': 'Нет сети', 'server.picking': 'Выбираем сервер…',
     'offline.banner': 'Вы офлайн: сайт открыт из кэша. Тест заработает, когда вернётся интернет.',
@@ -789,6 +828,17 @@ const STR = {
     'set.install': 'Приложение', 'set.installHint': 'Установите ZEPHYR на рабочий стол или главный экран: откроется в своём окне и работает офлайн.', 'set.installBtn': 'Установить',
     'foot.visits': 'Посещений', 'foot.tests': 'Тестов проведено',
     'foot.text': 'Замеры идут через публичные серверы <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a> и <a href="https://librespeed.org" target="_blank" rel="noopener">LibreSpeed</a>.',
+    'about.title': 'Тест скорости интернета онлайн',
+    'about.text': 'ZEPHYR — бесплатный тест скорости интернета прямо в браузере. Он измеряет скорость загрузки (download) и отдачи (upload), пинг, джиттер и пинг под нагрузкой — показатель, который объясняет лаги в играх и видеозвонках. Работает на компьютере и телефоне, без регистрации и рекламы, а история замеров хранится только в вашем браузере.',
+    'faq.title': 'Частые вопросы',
+    'faq.items': [
+      ['Как проверить скорость интернета?', 'Откройте ZEPHYR и нажмите «Начать тест». За 20–30 секунд сервис измерит пинг, джиттер, скорость загрузки и отдачи, а также пинг под нагрузкой, и покажет понятную оценку соединения.'],
+      ['Какая скорость интернета считается нормальной?', 'Для одного человека хватает 25–50 Мбит/с: этого достаточно для видео в 4K и онлайн-игр. Для семьи с несколькими устройствами комфортно от 100 Мбит/с. Для видеозвонков и стримов важен upload — от 3–10 Мбит/с.'],
+      ['Какой пинг нормальный для игр?', 'До 40 мс — отлично для любых онлайн-игр, 40–80 мс — играть можно, выше 100 мс заметны задержки. Важна и стабильность: джиттер лучше держать до 15 мс.'],
+      ['Что такое пинг под нагрузкой (bufferbloat)?', 'Это задержка, пока канал забит загрузкой. Если она сильно растёт, игры и звонки начинают лагать, как только кто-то дома качает файлы или смотрит видео. ZEPHYR измеряет её отдельно и ставит оценку от A+ до F.'],
+      ['Почему скорость ниже, чем в тарифе провайдера?', 'На результат влияют Wi-Fi (стены, расстояние до роутера, помехи), загрузка сети, другие устройства и VPN. Для самого точного замера подключитесь кабелем и закройте загрузки.'],
+      ['Это бесплатно? Нужна регистрация?', 'ZEPHYR полностью бесплатный и работает без регистрации. История ваших замеров хранится только в вашем браузере и никуда не отправляется.'],
+    ],
     'card.download': 'DOWNLOAD', 'card.upload': 'UPLOAD', 'card.ping': 'ПИНГ', 'card.jitter': 'ДЖИТТЕР', 'card.loaded': 'ПОД НАГРУЗКОЙ', 'card.grade': 'Оценка',
   },
   en: {
@@ -875,6 +925,17 @@ const STR = {
     'set.install': 'App', 'set.installHint': 'Install ZEPHYR on your desktop or home screen: it opens in its own window and works offline.', 'set.installBtn': 'Install',
     'foot.visits': 'Visits', 'foot.tests': 'Tests run',
     'foot.text': 'Tests run against public <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a> and <a href="https://librespeed.org" target="_blank" rel="noopener">LibreSpeed</a> servers.',
+    'about.title': 'Online internet speed test',
+    'about.text': 'ZEPHYR is a free internet speed test right in your browser. It measures download and upload speed, ping, jitter and loaded latency — the metric that explains lag in games and video calls. Works on desktop and mobile, no sign-up and no ads, and your test history stays in your browser only.',
+    'faq.title': 'FAQ',
+    'faq.items': [
+      ['How do I test my internet speed?', 'Open ZEPHYR and press “Start test”. In 20–30 seconds it measures ping, jitter, download and upload speed plus loaded latency, and gives a clear grade.'],
+      ['What internet speed is good?', '25–50 Mbps is enough for one person, including 4K video and online gaming. A household with several devices is comfortable from 100 Mbps. For video calls and streaming, upload matters — 3–10 Mbps or more.'],
+      ['What ping is good for gaming?', 'Under 40 ms is great for any online game, 40–80 ms is playable, above 100 ms you will notice delay. Stability matters too: keep jitter under 15 ms.'],
+      ['What is loaded latency (bufferbloat)?', 'It is the delay while your line is saturated. If it grows a lot, games and calls lag as soon as someone at home downloads or streams. ZEPHYR measures it separately and grades it from A+ to F.'],
+      ['Why is my speed lower than my plan?', 'Wi-Fi (walls, distance, interference), network load, other devices and VPNs all affect the result. For the most accurate test, use a cable and pause downloads.'],
+      ['Is it free? Do I need an account?', 'ZEPHYR is completely free and needs no account. Your test history is stored only in your browser and is never sent anywhere.'],
+    ],
     'card.download': 'DOWNLOAD', 'card.upload': 'UPLOAD', 'card.ping': 'PING', 'card.jitter': 'JITTER', 'card.loaded': 'LOADED', 'card.grade': 'Grade',
   },
 };
@@ -1787,6 +1848,9 @@ const GUIDE_ICONS = [
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>',
   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>',
 ];
+function renderFaq() {
+  $('#faqList').innerHTML = t('faq.items').map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('');
+}
 function renderGuide() {
   $('#guideTerms').innerHTML = t('guide.terms').map(([b, p]) => `<div class="term"><b>${esc(b)}</b><p>${esc(p)}</p></div>`).join('');
   $('#guideGrid').innerHTML = t('guide.cards').map(([h, p, rows], i) => `
@@ -1805,7 +1869,7 @@ function applyLang() {
   });
   $('#langBtn').textContent = L === 'ru' ? 'EN' : 'RU';
   $$('.ms-label').forEach((el) => { el.textContent = t('unit.ms'); });
-  renderGuide();
+  renderGuide(); renderFaq();
   setPhase(phaseKey, $('#gaugePhase').classList.contains('up'));
   if (alertState) showAlert(alertState.titleKey, alertState.textKey, alertState.vars, alertState.info);
   if (state.last && $('#result').classList.contains('show')) renderResult(state.last, false);
