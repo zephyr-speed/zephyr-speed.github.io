@@ -4,14 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ZEPHYR — тест скорости интернета</title>
-<meta name="description" content="ZEPHYR — быстрый и честный тест скорости интернета: пинг, джиттер, download и upload.">
+<meta name="description" content="ZEPHYR — быстрый и честный тест скорости интернета: пинг, джиттер, пинг под нагрузкой, download и upload.">
 <meta name="theme-color" content="#08201B">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="ZEPHYR">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:title" content="ZEPHYR — тест скорости интернета">
+<meta property="og:description" content="Скорость, которую видно">
 
-<!-- Иконки и манифест заполняются скриптом ниже из одного SVG-логотипа -->
+<!-- Иконки и манифест: на хостинге берутся файлами, локально генерируются из SVG-логотипа -->
 <link rel="icon" type="image/svg+xml" id="favicon">
 <link rel="apple-touch-icon" id="appleIcon">
 <link rel="manifest" id="manifestLink">
@@ -20,7 +22,6 @@
 /* =====================================================================
    ЛОГОТИП: единственный источник правды.
    Буква «Z», нижняя линия которой уходит в дугу спидометра.
-   Используется для favicon, apple-touch-icon, манифеста и шапки.
    ===================================================================== */
 window.ZEPHYR_LOGO = function (id) {
   id = id || 'zg';
@@ -29,61 +30,51 @@ window.ZEPHYR_LOGO = function (id) {
     '<stop offset="0" stop-color="#FF9E6D"/><stop offset="1" stop-color="#B8A4FF"/></linearGradient></defs>' +
     '<rect width="64" height="64" rx="15" fill="#08201B"/>' +
     '<rect x="1" y="1" width="62" height="62" rx="14" fill="none" stroke="#F2E6CF" stroke-opacity=".16"/>' +
-    /* тонкие риски шкалы вокруг дуги */
     '<g stroke="#F2E6CF" stroke-opacity=".35" stroke-width="1.4" stroke-linecap="round">' +
     '<path d="M52.5 30h2.5"/><path d="M50.9 37.6l2.2 1.1"/><path d="M46.4 43.9l1.6 1.9"/></g>' +
-    /* сама Z: верх → диагональ → низ → дуга спидометра */
     '<path d="M17 17.5H45L20.5 43H33.5A13.5 13.5 0 0 0 47 29.5" fill="none" stroke="url(#' + id + ')" ' +
     'stroke-width="5.6" stroke-linecap="round" stroke-linejoin="round"/>' +
-    /* светящийся кончик стрелки */
     '<circle cx="47" cy="29.5" r="3.4" fill="#F2E6CF"/>' +
     '</svg>';
 };
-(function setupIcons() {
-  var svg = window.ZEPHYR_LOGO('zfav');
-  var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-  document.getElementById('favicon').href = uri;
-  document.getElementById('appleIcon').href = uri;
+window.ZEPHYR_LOGO_URI = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(window.ZEPHYR_LOGO('zfav'));
 
-  // Манифест web app (data URI). Сначала с SVG-иконкой, потом дополним PNG.
-  function setManifest(extraIcons) {
+(function setupIcons() {
+  var uri = window.ZEPHYR_LOGO_URI;
+  var hosted = /^https?:$/.test(location.protocol);
+  document.getElementById('favicon').href = hosted ? 'icon.svg' : uri;
+  if (hosted) {
+    // На хостинге: настоящие файлы (нужны для установки как приложение и офлайна)
+    document.getElementById('appleIcon').href = 'apple-touch-icon.png';
+    document.getElementById('manifestLink').href = 'manifest.webmanifest';
+    return;
+  }
+  // Локально (file://): манифест и PNG-иконки собираем на лету
+  document.getElementById('appleIcon').href = uri;
+  function setManifest(extra) {
     var m = {
-      name: 'ZEPHYR — тест скорости',
-      short_name: 'ZEPHYR',
-      description: 'Скорость, которую видно',
-      start_url: location.href.split('#')[0],
-      scope: location.href.split('#')[0].replace(/[^/]*$/, ''),
-      display: 'standalone',
-      background_color: '#08201B',
-      theme_color: '#08201B',
-      icons: [{ src: uri, sizes: 'any', type: 'image/svg+xml' }].concat(extraIcons || [])
+      name: 'ZEPHYR', short_name: 'ZEPHYR', start_url: location.href.split('#')[0],
+      display: 'standalone', background_color: '#08201B', theme_color: '#08201B',
+      icons: [{ src: uri, sizes: 'any', type: 'image/svg+xml' }].concat(extra || [])
     };
     document.getElementById('manifestLink').href =
       'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(m));
   }
   setManifest();
-
-  // Рендерим SVG в PNG (iOS не понимает SVG в apple-touch-icon).
   function toPng(size) {
     return new Promise(function (res) {
       var img = new Image();
       img.onload = function () {
-        try {
-          var c = document.createElement('canvas'); c.width = c.height = size;
-          c.getContext('2d').drawImage(img, 0, 0, size, size);
-          res(c.toDataURL('image/png'));
-        } catch (e) { res(null); }
+        try { var c = document.createElement('canvas'); c.width = c.height = size;
+          c.getContext('2d').drawImage(img, 0, 0, size, size); res(c.toDataURL('image/png')); } catch (e) { res(null); }
       };
       img.onerror = function () { res(null); };
       img.src = uri;
     });
   }
-  Promise.all([toPng(180), toPng(192), toPng(512)]).then(function (p) {
+  Promise.all([toPng(180), toPng(512)]).then(function (p) {
     if (p[0]) document.getElementById('appleIcon').href = p[0];
-    var extra = [];
-    if (p[1]) extra.push({ src: p[1], sizes: '192x192', type: 'image/png' });
-    if (p[2]) extra.push({ src: p[2], sizes: '512x512', type: 'image/png', purpose: 'any maskable' });
-    if (extra.length) setManifest(extra);
+    if (p[1]) setManifest([{ src: p[1], sizes: '512x512', type: 'image/png' }]);
   });
 })();
 </script>
@@ -107,10 +98,9 @@ window.ZEPHYR_LOGO = function (id) {
   --text: #EAF2EF;
   --muted: #7FA39A;
 
-  /* производные (только из цветов палитры) */
   --heading: var(--champagne);
   --glass: rgba(14, 46, 39, .55);
-  --glass-strong: rgba(14, 46, 39, .78);
+  --glass-strong: rgba(14, 46, 39, .82);
   --border: rgba(242, 230, 207, .12);
   --line: rgba(242, 230, 207, .14);
   --track: rgba(242, 230, 207, .07);
@@ -131,7 +121,7 @@ window.ZEPHYR_LOGO = function (id) {
   --muted: rgba(8, 32, 27, .6);
   --heading: #08201B;
   --glass: rgba(255, 255, 255, .5);
-  --glass-strong: rgba(255, 255, 255, .78);
+  --glass-strong: rgba(255, 255, 255, .85);
   --border: rgba(8, 32, 27, .1);
   --line: rgba(8, 32, 27, .12);
   --track: rgba(8, 32, 27, .07);
@@ -146,12 +136,8 @@ window.ZEPHYR_LOGO = function (id) {
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
 body {
-  font-family: var(--font-ui);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  font-family: var(--font-ui); background: var(--bg); color: var(--text);
+  min-height: 100vh; -webkit-font-smoothing: antialiased; overflow-x: hidden;
   transition: background .5s ease, color .5s ease;
 }
 button { font: inherit; color: inherit; cursor: pointer; }
@@ -159,22 +145,17 @@ button { font: inherit; color: inherit; cursor: pointer; }
 h1, h2, h3 { color: var(--heading); margin: 0; font-weight: 600; letter-spacing: -.02em; }
 
 /* =====================================================================
-   3. ФОН: плывущие размытые пятна («ветер»)
+   3. ФОН: плывущие размытые пятна
    ===================================================================== */
-.wind { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-.wind span {
-  position: absolute; border-radius: 50%;
-  filter: blur(90px); opacity: var(--blob-opacity);
-  will-change: transform;
-}
-.wind .b1 { width: 46vmax; height: 46vmax; background: var(--apricot); top: -18vmax; left: -12vmax; animation: drift1 34s ease-in-out infinite alternate; }
-.wind .b2 { width: 40vmax; height: 40vmax; background: var(--lavender); bottom: -16vmax; right: -10vmax; animation: drift2 40s ease-in-out infinite alternate; }
-.wind .b3 { width: 30vmax; height: 30vmax; background: var(--bg2); top: 30%; left: 40%; opacity: .9; animation: drift3 28s ease-in-out infinite alternate; }
-.wind .b4 { width: 22vmax; height: 22vmax; background: var(--champagne); top: 55%; left: 5%; opacity: calc(var(--blob-opacity) * .45); animation: drift2 46s ease-in-out infinite alternate-reverse; }
+.wind-bg { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.wind-bg span { position: absolute; border-radius: 50%; filter: blur(90px); opacity: var(--blob-opacity); will-change: transform; }
+.wind-bg .b1 { width: 46vmax; height: 46vmax; background: var(--apricot); top: -18vmax; left: -12vmax; animation: drift1 34s ease-in-out infinite alternate; }
+.wind-bg .b2 { width: 40vmax; height: 40vmax; background: var(--lavender); bottom: -16vmax; right: -10vmax; animation: drift2 40s ease-in-out infinite alternate; }
+.wind-bg .b3 { width: 30vmax; height: 30vmax; background: var(--bg2); top: 30%; left: 40%; opacity: .9; animation: drift3 28s ease-in-out infinite alternate; }
+.wind-bg .b4 { width: 22vmax; height: 22vmax; background: var(--champagne); top: 55%; left: 5%; opacity: calc(var(--blob-opacity) * .45); animation: drift2 46s ease-in-out infinite alternate-reverse; }
 @keyframes drift1 { to { transform: translate(28vw, 18vh) scale(1.15); } }
 @keyframes drift2 { to { transform: translate(-30vw, -14vh) scale(.9); } }
 @keyframes drift3 { to { transform: translate(-22vw, 12vh) scale(1.2); } }
-/* лёгкое «зерно» поверх, чтобы градиенты не полосили */
 .grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: .05;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 
@@ -188,15 +169,22 @@ header.top { display: flex; align-items: center; justify-content: space-between;
 .brand .logo svg { width: 100%; height: 100%; display: block; }
 .brand-name { font-family: var(--font-num); font-weight: 700; font-size: 22px; letter-spacing: .18em; color: var(--heading); line-height: 1; }
 .brand-tag { font-size: 12.5px; color: var(--muted); margin-top: 5px; letter-spacing: .01em; }
-.server-chip {
+.top-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chip {
   display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 999px;
   background: var(--glass); border: 1px solid var(--border); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-  font-size: 12.5px; color: var(--muted); max-width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.server-chip { max-width: 420px; }
 .server-chip b { color: var(--text); font-weight: 500; }
+.lang-btn { border: 1px solid var(--border); background: var(--glass); color: var(--text); font-weight: 600; font-size: 12px; letter-spacing: .08em; padding: 9px 13px; border-radius: 999px; transition: border-color .2s, color .2s; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.lang-btn:hover { border-color: var(--lavender); color: var(--lavender); }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); flex: none; }
 .dot.ok { background: var(--apricot); box-shadow: 0 0 10px var(--apricot); }
 .dot.bad { background: var(--lavender); }
+
+.offline-banner { display: none; margin: -12px auto 22px; max-width: 640px; text-align: center; font-size: 13px; color: var(--muted); padding: 10px 16px; border-radius: 14px; border: 1px dashed var(--line); }
+.offline-banner.show { display: block; }
 
 nav.tabs {
   display: flex; gap: 4px; padding: 5px; border-radius: 999px; width: max-content; max-width: 100%;
@@ -215,33 +203,35 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 :root[data-theme="light"] nav.tabs button.active { color: #08201B; }
 
 /* =====================================================================
-   5. КАРТОЧКИ (glassmorphism)
+   5. КАРТОЧКИ
    ===================================================================== */
 .card {
   position: relative; background: var(--glass); border: 1px solid var(--border); border-radius: var(--radius);
   backdrop-filter: blur(22px) saturate(1.2); -webkit-backdrop-filter: blur(22px) saturate(1.2);
   box-shadow: var(--shadow); padding: 28px;
 }
-/* тонкая линия шампань по верхней кромке */
 .card::before {
   content: ''; position: absolute; left: 24px; right: 24px; top: 0; height: 1px;
   background: linear-gradient(90deg, transparent, var(--line), transparent);
 }
 .card-title { font-size: 13px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-title .legend { text-transform: none; letter-spacing: 0; font-weight: 500; }
 
-/* вкладки и анимация переключения */
 .tab { display: none; }
 .tab.active { display: block; animation: tabIn .5s cubic-bezier(.2, .8, .2, 1); }
 @keyframes tabIn { from { opacity: 0; transform: translateY(14px); filter: blur(4px); } to { opacity: 1; transform: none; filter: none; } }
 .section-head { margin-bottom: 22px; }
 .section-head h2 { font-size: clamp(24px, 3.2vw, 32px); }
-.section-head p { color: var(--muted); margin: 8px 0 0; font-size: 15px; line-height: 1.55; max-width: 620px; }
+.section-head p { color: var(--muted); margin: 8px 0 0; font-size: 15px; line-height: 1.55; max-width: 640px; }
 
 /* =====================================================================
    6. ВКЛАДКА «ТЕСТ»
    ===================================================================== */
 .test-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
-.gauge-card { display: flex; flex-direction: column; align-items: center; padding: 32px 28px 30px; }
+.gauge-card { display: flex; flex-direction: column; align-items: center; padding: 32px 28px 30px; overflow: hidden; }
+.gauge-card > *:not(.wind-canvas) { position: relative; z-index: 1; }
+/* «волна ветра»: потоки воздуха за спидометром */
+.wind-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
 .gauge { position: relative; width: 100%; max-width: 400px; aspect-ratio: 1; }
 .gauge svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .gauge .tick { stroke: var(--line); stroke-width: 1.5; stroke-linecap: round; }
@@ -252,8 +242,14 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .gauge-phase { margin-top: 14px; font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase; color: var(--apricot); min-height: 1em; font-weight: 600; }
 .gauge-phase.up { color: var(--lavender); }
 
+/* живой график скорости */
+.live { width: 100%; max-width: 400px; margin: -18px 0 18px; }
+.live canvas { width: 100%; height: 64px; display: block; }
+.live-legend { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; letter-spacing: .06em; text-transform: uppercase; }
+.live-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+
 .start-btn {
-  margin-top: 8px; border: 0; padding: 17px 44px; border-radius: 999px;
+  margin-top: 4px; border: 0; padding: 17px 44px; border-radius: 999px;
   background: linear-gradient(135deg, var(--apricot), #FFB48C 60%, var(--apricot));
   color: #08201B; font-weight: 600; font-size: 16px; letter-spacing: .02em;
   box-shadow: 0 10px 40px var(--apricot-glow), inset 0 1px 0 rgba(255, 255, 255, .35);
@@ -265,7 +261,6 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .start-btn.running:hover { color: var(--lavender); box-shadow: inset 0 0 0 1.5px var(--lavender); }
 .start-btn svg { width: 18px; height: 18px; }
 
-/* прогресс по этапам */
 .stages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
 .stage { font-size: 12.5px; color: var(--muted); display: flex; flex-direction: column; gap: 9px; }
 .stage .bar { height: 4px; border-radius: 4px; background: var(--track); overflow: hidden; }
@@ -273,32 +268,49 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .stage.s-up .bar i { background: var(--lavender); box-shadow: 0 0 12px var(--lavender); }
 .stage.active { color: var(--text); }
 .stage.done { color: var(--heading); }
-.stage span { display: flex; justify-content: space-between; }
 
-/* живые показатели */
 .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .metric { padding: 20px; border-radius: 18px; background: var(--track); border: 1px solid var(--border); transition: border-color .3s, box-shadow .3s; }
-.metric.live { border-color: rgba(255, 158, 109, .45); box-shadow: 0 0 30px rgba(255, 158, 109, .12); }
-.metric.live.m-up { border-color: rgba(184, 164, 255, .5); box-shadow: 0 0 30px rgba(184, 164, 255, .14); }
+.metric.wide { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.metric.wide > div:first-child { min-width: 0; }
+.metric.live-on { border-color: rgba(255, 158, 109, .45); box-shadow: 0 0 30px rgba(255, 158, 109, .12); }
+.metric.live-on.m-up { border-color: rgba(184, 164, 255, .5); box-shadow: 0 0 30px rgba(184, 164, 255, .14); }
 .metric-label { font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; display: flex; align-items: center; gap: 8px; }
-.metric-label i { width: 8px; height: 8px; border-radius: 2px; background: var(--champagne); display: inline-block; }
+.metric-label i { width: 8px; height: 8px; border-radius: 2px; background: var(--champagne); display: inline-block; flex: none; }
 .m-down .metric-label i { background: var(--apricot); }
 .m-up .metric-label i { background: var(--lavender); }
 .metric-value { font-family: var(--font-num); font-size: 34px; font-weight: 600; margin-top: 10px; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.03em; }
 .m-down .metric-value { color: var(--apricot); }
 .m-up .metric-value { color: var(--lavender); }
 .metric-value small { font-size: 13px; color: var(--muted); font-family: var(--font-ui); font-weight: 400; margin-left: 5px; letter-spacing: 0; }
+.metric-hint { font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+.loaded-vals { display: flex; gap: 22px; align-items: baseline; font-family: var(--font-num); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.loaded-vals .ld { color: var(--apricot); }
+.loaded-vals .lu { color: var(--lavender); }
+.loaded-vals small { font-size: 12px; color: var(--muted); font-family: var(--font-ui); font-weight: 400; margin-left: 3px; }
+.bb-grade { font-family: var(--font-num); font-weight: 700; font-size: 18px; min-width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; background: var(--track); border: 1px solid var(--border); color: var(--muted); }
+.bb-grade.g-good { color: var(--apricot); border-color: rgba(255, 158, 109, .5); background: rgba(255, 158, 109, .12); }
+.bb-grade.g-mid { color: var(--champagne); border-color: var(--line); }
+:root[data-theme="light"] .bb-grade.g-mid { color: #08201B; }
+.bb-grade.g-bad { color: var(--lavender); border-color: rgba(184, 164, 255, .5); background: rgba(184, 164, 255, .12); }
 
 /* итоговая карточка */
 .result { margin-top: 24px; display: none; }
 .result.show { display: block; animation: resultIn .7s cubic-bezier(.2, .8, .2, 1); }
 @keyframes resultIn { from { opacity: 0; transform: translateY(20px) scale(.98); } to { opacity: 1; transform: none; } }
-.result-head { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; }
+.result-head { display: flex; align-items: center; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; }
+.result-head .rh-text { flex: 1; min-width: 200px; }
 .grade-ring { width: 76px; height: 76px; flex: none; position: relative; }
 .grade-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
 .grade-ring b { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--font-num); font-size: 22px; font-weight: 600; }
 .result-head h3 { font-size: 24px; }
 .result-head p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.share-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.share-btn { display: inline-flex; align-items: center; gap: 8px; border: 0; padding: 12px 20px; border-radius: 999px; font-weight: 600; font-size: 14px; background: var(--lavender); color: #08201B; box-shadow: 0 8px 26px var(--lavender-glow); transition: transform .2s, box-shadow .2s; }
+.share-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 34px var(--lavender-glow); }
+.share-btn.ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--border); }
+.share-btn.ghost:hover { color: var(--lavender); box-shadow: inset 0 0 0 1px var(--lavender); }
+.share-btn svg { width: 16px; height: 16px; }
 .verdicts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .verdict { display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: 16px; background: var(--track); border: 1px solid var(--border); font-size: 14px; line-height: 1.4; transition: transform .25s, border-color .25s; }
 .verdict:hover { transform: translateY(-2px); border-color: var(--lavender); }
@@ -310,7 +322,6 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .verdict.bad .ic { background: rgba(184, 164, 255, .16); color: var(--lavender); }
 .verdict small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
 
-/* баннер ошибки */
 .alert { display: none; margin-top: 24px; padding: 18px 20px; border-radius: 18px; border: 1px solid rgba(184, 164, 255, .45); background: rgba(184, 164, 255, .1); gap: 14px; align-items: flex-start; }
 .alert.show { display: flex; animation: resultIn .5s ease; }
 .alert .ic { color: var(--lavender); flex: none; margin-top: 1px; }
@@ -318,6 +329,12 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .alert p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
 .alert.info { border-color: var(--line); background: var(--track); }
 .alert.info .ic { color: var(--champagne); }
+
+/* всплывающие уведомления */
+.toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); opacity: 0; z-index: 50; pointer-events: none;
+  background: var(--glass-strong); border: 1px solid var(--border); color: var(--text); padding: 12px 18px; border-radius: 14px; font-size: 14px;
+  backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); box-shadow: var(--shadow); transition: opacity .3s, transform .3s; max-width: calc(100% - 32px); text-align: center; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* =====================================================================
    7. ИСТОРИЯ / СТАТИСТИКА
@@ -327,14 +344,16 @@ nav.tabs button.active { color: var(--bg); background: var(--apricot); box-shado
 .empty svg { width: 46px; height: 46px; opacity: .5; margin-bottom: 14px; }
 .empty b { display: block; color: var(--text); font-weight: 500; margin-bottom: 6px; font-size: 16px; }
 .table-wrap { overflow-x: auto; margin: 0 -8px; }
-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
-th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 10px 8px; border-bottom: 1px solid var(--line); }
-td { padding: 14px 8px; border-bottom: 1px solid var(--track); font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 640px; }
+th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 14px 8px; border-bottom: 1px solid var(--track); font-family: var(--font-num); font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .u { color: var(--muted); font-weight: 400; }
 tbody tr { transition: background .2s; }
 tbody tr:hover { background: var(--track); }
 td.c-down { color: var(--apricot); font-weight: 600; }
 td.c-up { color: var(--lavender); font-weight: 600; }
-td.c-date { font-family: var(--font-ui); color: var(--muted); }
+td.c-date, td.c-srv { font-family: var(--font-ui); color: var(--muted); }
+td.c-srv { font-size: 12.5px; }
 .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 11.5px; font-family: var(--font-ui); background: rgba(184, 164, 255, .15); color: var(--lavender); font-weight: 600; }
 .stack { display: grid; gap: 24px; }
 .ghost-btn { border: 1px solid var(--border); background: transparent; padding: 8px 16px; border-radius: 999px; font-size: 13px; color: var(--muted); transition: color .2s, border-color .2s, background .2s; text-transform: none; letter-spacing: 0; font-weight: 500; }
@@ -356,7 +375,7 @@ td.c-date { font-family: var(--font-ui); color: var(--muted); }
    ===================================================================== */
 .guide-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .guide-card h3 { font-size: 19px; margin-bottom: 6px; display: flex; align-items: center; gap: 12px; }
-.guide-card h3 .gi { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 158, 109, .14); color: var(--apricot); }
+.guide-card h3 .gi { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: rgba(255, 158, 109, .14); color: var(--apricot); flex: none; }
 .guide-card:nth-child(even) h3 .gi { background: rgba(184, 164, 255, .15); color: var(--lavender); }
 .guide-card h3 .gi svg { width: 18px; height: 18px; }
 .guide-card > p { color: var(--muted); font-size: 14px; line-height: 1.6; margin: 10px 0 16px; }
@@ -364,26 +383,31 @@ td.c-date { font-family: var(--font-ui); color: var(--muted); }
 .req li { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 14px; }
 .req li b { font-family: var(--font-num); font-weight: 600; color: var(--apricot); white-space: nowrap; }
 .guide-card:nth-child(even) .req li b { color: var(--lavender); }
-.terms { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 18px; margin-bottom: 20px; }
 .term b { font-family: var(--font-num); color: var(--heading); font-size: 17px; display: block; margin-bottom: 8px; }
 .term p { margin: 0; color: var(--muted); font-size: 13.5px; line-height: 1.55; }
 
 /* =====================================================================
    9. НАСТРОЙКИ
    ===================================================================== */
-.settings { max-width: 680px; }
+.settings { max-width: 720px; }
 .setting { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 22px 0; border-top: 1px solid var(--line); }
 .setting:first-of-type { border-top: 0; padding-top: 4px; }
 .setting h3 { font-size: 16px; font-weight: 500; color: var(--text); }
 .setting p { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
-.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--track); border: 1px solid var(--border); flex: none; }
+.seg { display: inline-flex; padding: 4px; border-radius: 999px; background: var(--track); border: 1px solid var(--border); flex: none; flex-wrap: wrap; }
 .seg button { border: 0; background: transparent; padding: 8px 16px; border-radius: 999px; font-size: 13.5px; color: var(--muted); font-weight: 500; transition: all .25s; white-space: nowrap; }
 .seg button:hover { color: var(--lavender); }
 .seg button.on { background: var(--glass-strong); color: var(--text); box-shadow: 0 0 0 1px var(--apricot), 0 4px 18px var(--apricot-glow); }
 .seg button:disabled { opacity: .45; cursor: not-allowed; }
+#installRow { display: none; }
+#installRow.show { display: flex; }
 
-footer.foot { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.7; }
+footer.foot { margin-top: 48px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.8; }
 footer.foot a { color: inherit; }
+.counters { display: none; justify-content: center; gap: 18px; margin-bottom: 8px; font-size: 13px; }
+.counters.show { display: flex; }
+.counters b { color: var(--heading); font-family: var(--font-num); font-weight: 600; }
 
 /* =====================================================================
    10. АДАПТИВ
@@ -391,7 +415,6 @@ footer.foot a { color: inherit; }
 @media (max-width: 960px) {
   .test-grid { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
-  .terms { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 720px) {
   .app { padding: 18px 16px calc(110px + env(safe-area-inset-bottom)); }
@@ -399,7 +422,6 @@ footer.foot a { color: inherit; }
   .server-chip { display: none; }
   .card { padding: 22px 18px; border-radius: 20px; }
   .card::before { left: 18px; right: 18px; }
-  /* навигация уезжает вниз, как в приложении */
   nav.tabs {
     position: fixed; z-index: 20; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom));
     width: auto; margin: 0; justify-content: space-between; border-radius: 22px; padding: 6px;
@@ -408,9 +430,11 @@ footer.foot a { color: inherit; }
   nav.tabs button { flex-direction: column; gap: 4px; padding: 8px 4px; font-size: 10.5px; flex: 1; border-radius: 16px; }
   nav.tabs button svg { width: 20px; height: 20px; }
   nav.tabs .lg { display: none; } nav.tabs .sm { display: inline; }
+  .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
   .metrics { gap: 10px; }
   .metric { padding: 16px; }
   .metric-value { font-size: 27px; }
+  .loaded-vals { font-size: 20px; gap: 16px; }
   .verdicts { grid-template-columns: 1fr; }
   .guide-grid { grid-template-columns: 1fr; }
   .setting { flex-direction: column; align-items: flex-start; }
@@ -418,7 +442,7 @@ footer.foot a { color: inherit; }
   .stat-main { font-size: 30px; }
 }
 @media (max-width: 420px) {
-  .stat-grid, .terms { grid-template-columns: 1fr; }
+  .stat-grid { grid-template-columns: 1fr; }
   nav.tabs button span { font-size: 9.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -428,29 +452,34 @@ footer.foot a { color: inherit; }
 </head>
 <body>
 
-<div class="wind" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
+<div class="wind-bg" aria-hidden="true"><span class="b1"></span><span class="b2"></span><span class="b3"></span><span class="b4"></span></div>
 <div class="grain" aria-hidden="true"></div>
 
 <div class="app">
   <!-- ============ ШАПКА ============ -->
   <header class="top">
-    <a class="brand" href="#" data-goto="test" aria-label="ZEPHYR — на главную">
+    <a class="brand" href="#" data-goto="test" aria-label="ZEPHYR">
       <div class="logo" id="headerLogo"></div>
       <div>
         <div class="brand-name">ZEPHYR</div>
-        <div class="brand-tag">Скорость, которую видно</div>
+        <div class="brand-tag" data-i18n="slogan"></div>
       </div>
     </a>
-    <div class="server-chip" id="serverChip"><i class="dot" id="serverDot"></i><span id="serverText">Ищем ближайший узел…</span></div>
+    <div class="top-right">
+      <div class="chip server-chip" id="serverChip"><i class="dot" id="serverDot"></i><span id="serverText"></span></div>
+      <button class="lang-btn" id="langBtn" aria-label="Language">EN</button>
+    </div>
   </header>
 
+  <div class="offline-banner" id="offlineBanner" data-i18n="offline.banner"></div>
+
   <!-- ============ НАВИГАЦИЯ ============ -->
-  <nav class="tabs" id="tabs" aria-label="Разделы">
-    <button class="active" data-tab="test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><span>Тест</span></button>
-    <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span>История</span></button>
-    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span>Статистика</span></button>
-    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 0 7.5 23H19"/></svg><span class="lg">Что значат цифры</span><span class="sm">Гайд</span></button>
-    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span>Настройки</span></button>
+  <nav class="tabs" id="tabs">
+    <button class="active" data-tab="test"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><span data-i18n="tab.test"></span></button>
+    <button data-tab="history"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg><span data-i18n="tab.history"></span></button>
+    <button data-tab="stats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 20V11M12 20V5M19 20v-6"/></svg><span data-i18n="tab.stats"></span></button>
+    <button data-tab="guide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3H19v15H7.5A2.5 2.5 0 0 0 5 20.5z"/><path d="M5 20.5A2.5 2.5 0 0 0 7.5 23H19"/></svg><span class="lg" data-i18n="tab.guide"></span><span class="sm" data-i18n="tab.guideShort"></span></button>
+    <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg><span data-i18n="tab.settings"></span></button>
   </nav>
 
   <main>
@@ -460,8 +489,9 @@ footer.foot a { color: inherit; }
     <section class="tab active" id="tab-test">
       <div class="test-grid">
         <div class="card gauge-card">
+          <canvas class="wind-canvas" id="windCanvas" aria-hidden="true"></canvas>
           <div class="gauge">
-            <svg viewBox="0 0 300 300" id="gaugeSvg" aria-hidden="true">
+            <svg viewBox="0 0 300 300" aria-hidden="true">
               <defs>
                 <linearGradient id="arcGrad" gradientUnits="userSpaceOnUse" x1="40" y1="0" x2="260" y2="0">
                   <stop offset="0" stop-color="#FF9E6D"/>
@@ -483,29 +513,46 @@ footer.foot a { color: inherit; }
             </svg>
             <div class="gauge-center" aria-live="polite">
               <div class="gauge-value" id="gaugeValue">0</div>
-              <div class="gauge-unit" id="gaugeUnit">Мбит/с</div>
-              <div class="gauge-phase" id="gaugePhase">готов к замеру</div>
+              <div class="gauge-unit" id="gaugeUnit"></div>
+              <div class="gauge-phase" id="gaugePhase"></div>
             </div>
+          </div>
+          <!-- живой график скорости -->
+          <div class="live">
+            <canvas id="liveChart" aria-hidden="true"></canvas>
+            <div class="live-legend"><span><i style="background:var(--apricot)"></i>download</span><span><i style="background:var(--lavender)"></i>upload</span></div>
           </div>
           <button class="start-btn" id="startBtn">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
-            <span>Начать тест</span>
+            <span></span>
           </button>
         </div>
 
         <div>
           <div class="card">
-            <div class="card-title">Ход замера <span class="num" id="totalPct" style="letter-spacing:0">0%</span></div>
+            <div class="card-title"><span data-i18n="progress.title"></span> <span class="num" id="totalPct" style="letter-spacing:0">0%</span></div>
             <div class="stages">
-              <div class="stage" id="st-ping"><span>Пинг</span><div class="bar"><i></i></div></div>
+              <div class="stage" id="st-ping"><span data-i18n="m.ping"></span><div class="bar"><i></i></div></div>
               <div class="stage" id="st-down"><span>Download</span><div class="bar"><i></i></div></div>
               <div class="stage s-up" id="st-up"><span>Upload</span><div class="bar"><i></i></div></div>
             </div>
             <div class="metrics" style="margin-top:22px">
-              <div class="metric m-ping" id="mt-ping"><div class="metric-label"><i></i>Пинг</div><div class="metric-value"><span id="v-ping">—</span><small>мс</small></div></div>
-              <div class="metric m-jitter" id="mt-jitter"><div class="metric-label"><i></i>Джиттер</div><div class="metric-value"><span id="v-jitter">—</span><small>мс</small></div></div>
-              <div class="metric m-down" id="mt-down"><div class="metric-label"><i></i>Download</div><div class="metric-value"><span id="v-down">—</span><small class="unit-label">Мбит/с</small></div></div>
-              <div class="metric m-up" id="mt-up"><div class="metric-label"><i></i>Upload</div><div class="metric-value"><span id="v-up">—</span><small class="unit-label">Мбит/с</small></div></div>
+              <div class="metric m-ping" id="mt-ping"><div class="metric-label"><i></i><span data-i18n="m.ping"></span></div><div class="metric-value"><span id="v-ping">—</span><small class="ms-label"></small></div></div>
+              <div class="metric m-jitter" id="mt-jitter"><div class="metric-label"><i></i><span data-i18n="m.jitter"></span></div><div class="metric-value"><span id="v-jitter">—</span><small class="ms-label"></small></div></div>
+              <div class="metric m-down" id="mt-down"><div class="metric-label"><i></i>Download</div><div class="metric-value"><span id="v-down">—</span><small class="unit-label"></small></div></div>
+              <div class="metric m-up" id="mt-up"><div class="metric-label"><i></i>Upload</div><div class="metric-value"><span id="v-up">—</span><small class="unit-label"></small></div></div>
+              <!-- нагруженный пинг (bufferbloat) -->
+              <div class="metric wide" id="mt-loaded">
+                <div>
+                  <div class="metric-label"><i style="background:linear-gradient(135deg,var(--apricot),var(--lavender))"></i><span data-i18n="m.loaded"></span></div>
+                  <div class="loaded-vals" style="margin-top:10px">
+                    <span class="ld">↓ <span id="v-ld">—</span><small class="ms-label"></small></span>
+                    <span class="lu">↑ <span id="v-lu">—</span><small class="ms-label"></small></span>
+                  </div>
+                  <div class="metric-hint" data-i18n="m.loadedHint"></div>
+                </div>
+                <div class="bb-grade" id="bbGrade" title="Bufferbloat">—</div>
+              </div>
             </div>
           </div>
 
@@ -526,9 +573,13 @@ footer.foot a { color: inherit; }
             </svg>
             <b id="gradeScore">0</b>
           </div>
-          <div>
+          <div class="rh-text">
             <h3 id="gradeTitle">—</h3>
             <p id="gradeText"></p>
+          </div>
+          <div class="share-row">
+            <button class="share-btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg><span data-i18n="result.share"></span></button>
+            <button class="share-btn ghost" id="saveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-i18n="result.save"></span></button>
           </div>
         </div>
         <div class="verdicts" id="verdicts"></div>
@@ -540,17 +591,16 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-history">
       <div class="section-head">
-        <h2>История замеров</h2>
-        <p>Ваши замеры хранятся только в этом браузере на этом устройстве. Регистрация не нужна, другие посетители вашу историю не видят.</p>
+        <h2 data-i18n="history.title"></h2>
+        <p data-i18n="history.desc"></p>
       </div>
       <div class="stack">
         <div class="card">
-          <div class="card-title">Динамика <span style="text-transform:none;letter-spacing:0;font-weight:500">
-            <span style="color:var(--apricot)">●</span> download &nbsp; <span style="color:var(--lavender)">●</span> upload</span></div>
-          <div class="chart-box" id="historyChartBox"><canvas id="historyChart"></canvas></div>
+          <div class="card-title"><span data-i18n="history.trend"></span><span class="legend"><span style="color:var(--apricot)">●</span> download &nbsp; <span style="color:var(--lavender)">●</span> upload</span></div>
+          <div class="chart-box" id="historyChartBox"></div>
         </div>
         <div class="card">
-          <div class="card-title">Все замеры <button class="ghost-btn" id="clearBtn">Очистить историю</button></div>
+          <div class="card-title"><span data-i18n="history.all"></span> <button class="ghost-btn" id="clearBtn" data-i18n="history.clear"></button></div>
           <div id="historyTable"></div>
         </div>
       </div>
@@ -561,78 +611,31 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-stats">
       <div class="section-head">
-        <h2>Статистика</h2>
-        <p>Средние, лучшие и худшие значения по всем вашим замерам на этом устройстве.</p>
+        <h2 data-i18n="stats.title"></h2>
+        <p data-i18n="stats.desc"></p>
       </div>
       <div class="stack">
         <div class="stat-grid" id="statGrid"></div>
         <div class="card">
-          <div class="card-title">Все замеры <span style="text-transform:none;letter-spacing:0;font-weight:500">
-            <span style="color:var(--apricot)">■</span> download &nbsp; <span style="color:var(--lavender)">■</span> upload</span></div>
-          <div class="chart-box" id="statsChartBox"><canvas id="statsChart"></canvas></div>
+          <div class="card-title"><span data-i18n="history.all"></span><span class="legend"><span style="color:var(--apricot)">■</span> download &nbsp; <span style="color:var(--lavender)">■</span> upload</span></div>
+          <div class="chart-box" id="statsChartBox"></div>
         </div>
       </div>
     </section>
 
     <!-- ================================================================
-         ВКЛАДКА 4: ЧТО ЗНАЧАТ ЦИФРЫ
+         ВКЛАДКА 4: ЧТО ЗНАЧАТ ЦИФРЫ (контент целиком из словаря)
          ================================================================ -->
     <section class="tab" id="tab-guide">
       <div class="section-head">
-        <h2>Что значат цифры</h2>
-        <p>Коротко о том, на что смотреть в результатах и какая скорость нужна под конкретные задачи. Значения ориентировочные, на одно устройство.</p>
+        <h2 data-i18n="guide.title"></h2>
+        <p data-i18n="guide.desc"></p>
       </div>
-      <div class="card terms">
-        <div class="term"><b>Пинг</b><p>Время, за которое сигнал доходит до сервера и обратно. Чем меньше, тем отзывчивее сеть.</p></div>
-        <div class="term"><b>Джиттер</b><p>Насколько скачет пинг. Высокий джиттер даёт рывки в играх и «робота» в звонках.</p></div>
-        <div class="term"><b>Download</b><p>Скорость получения данных: видео, сайты, загрузки, обновления игр.</p></div>
-        <div class="term"><b>Upload</b><p>Скорость отправки: видеосвязь, стримы, выгрузка файлов в облако.</p></div>
-      </div>
-      <div class="guide-grid">
-        <div class="card guide-card">
-          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg></span>Стриминг видео</h3>
-          <p>Смотрим download. Если дома несколько экранов, скорости складываются.</p>
-          <ul class="req">
-            <li>SD (480p)<b>от 3 Мбит/с</b></li>
-            <li>HD (720p)<b>от 5 Мбит/с</b></li>
-            <li>Full HD (1080p)<b>от 10 Мбит/с</b></li>
-            <li>4K / HDR<b>от 25 Мбит/с</b></li>
-          </ul>
-        </div>
-        <div class="card guide-card">
-          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 9.5v.01M17.5 11v.01"/><path d="M7 5h10a4 4 0 0 1 4 4v4.5a3.5 3.5 0 0 1-6 2.4L13.5 14h-3L9 15.9a3.5 3.5 0 0 1-6-2.4V9a4 4 0 0 1 4-4z"/></svg></span>Онлайн-игры</h3>
-          <p>Для игр скорость вторична: важны пинг и его стабильность.</p>
-          <ul class="req">
-            <li>Пинг: комфортно<b>до 40 мс</b></li>
-            <li>Пинг: терпимо<b>40–80 мс</b></li>
-            <li>Джиттер<b>до 15 мс</b></li>
-            <li>Download / Upload<b>от 5 / 1 Мбит/с</b></li>
-          </ul>
-        </div>
-        <div class="card guide-card">
-          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-3v9l-5-3z"/></svg></span>Видеозвонки</h3>
-          <p>Здесь работает и upload: вы ведь тоже отправляете видео.</p>
-          <ul class="req">
-            <li>Голосовой звонок<b>от 0,5 Мбит/с</b></li>
-            <li>Видео 1-на-1 в HD<b>от 1,5–3 Мбит/с</b></li>
-            <li>Групповой созвон<b>от 3–4 Мбит/с</b></li>
-            <li>Пинг<b>до 100 мс</b></li>
-          </ul>
-        </div>
-        <div class="card guide-card">
-          <h3><span class="gi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span>Свои стримы и облако</h3>
-          <p>Для трансляций и бэкапов решает upload. Берите запас ~30%.</p>
-          <ul class="req">
-            <li>Стрим 720p30<b>от 4 Мбит/с</b></li>
-            <li>Стрим 1080p60<b>от 8–10 Мбит/с</b></li>
-            <li>Стрим 4K<b>от 25 Мбит/с</b></li>
-            <li>1 ГБ в облако при 50 Мбит/с<b>≈ 3 мин</b></li>
-          </ul>
-        </div>
-      </div>
+      <div class="card terms" id="guideTerms"></div>
+      <div class="guide-grid" id="guideGrid"></div>
       <div class="card" style="margin-top:20px">
-        <div class="card-title" style="margin-bottom:10px">Мбит/с или МБ/с?</div>
-        <p style="margin:0;color:var(--muted);line-height:1.6;font-size:14.5px">Провайдеры пишут скорость в мегабитах (Мбит/с), а браузер и торренты показывают мегабайты (МБ/с). В одном байте 8 бит, так что 100 Мбит/с ≈ 12,5 МБ/с. Переключить единицы можно в настройках.</p>
+        <div class="card-title" style="margin-bottom:10px" data-i18n="guide.unitsTitle"></div>
+        <p style="margin:0;color:var(--muted);line-height:1.6;font-size:14.5px" data-i18n="guide.unitsText"></p>
       </div>
     </section>
 
@@ -641,124 +644,330 @@ footer.foot a { color: inherit; }
          ================================================================ -->
     <section class="tab" id="tab-settings">
       <div class="section-head">
-        <h2>Настройки</h2>
-        <p>Под себя: единицы, длительность замера и тема.</p>
+        <h2 data-i18n="settings.title"></h2>
+        <p data-i18n="settings.desc"></p>
       </div>
       <div class="card settings">
         <div class="setting">
-          <div><h3>Единицы скорости</h3><p>Мегабиты, как у провайдера, или мегабайты, как в браузере.</p></div>
-          <div class="seg" data-setting="unit">
-            <button data-value="mbps">Мбит/с</button>
-            <button data-value="MBps">МБ/с</button>
-          </div>
+          <div><h3 data-i18n="set.lang"></h3><p data-i18n="set.langHint"></p></div>
+          <div class="seg" data-setting="lang"><button data-value="ru">Русский</button><button data-value="en">English</button></div>
         </div>
         <div class="setting">
-          <div><h3>Длительность теста</h3><p>Время на каждый этап (download и upload). Дольше значит точнее, особенно на быстрых каналах.</p></div>
-          <div class="seg" data-setting="duration">
-            <button data-value="6">6 с</button>
-            <button data-value="10">10 с</button>
-            <button data-value="15">15 с</button>
-          </div>
+          <div><h3 data-i18n="set.unit"></h3><p data-i18n="set.unitHint"></p></div>
+          <div class="seg" data-setting="unit"><button data-value="mbps" data-i18n="unit.mbps"></button><button data-value="MBps" data-i18n="unit.MBps"></button></div>
         </div>
         <div class="setting">
-          <div><h3>Тема</h3><p>Тёмная изумрудная или светлая песочная.</p></div>
-          <div class="seg" data-setting="theme">
-            <button data-value="dark">Тёмная</button>
-            <button data-value="light">Светлая</button>
-          </div>
+          <div><h3 data-i18n="set.duration"></h3><p data-i18n="set.durationHint"></p></div>
+          <div class="seg" data-setting="duration"><button data-value="6" data-i18n="set.s6"></button><button data-value="10" data-i18n="set.s10"></button><button data-value="15" data-i18n="set.s15"></button></div>
+        </div>
+        <div class="setting">
+          <div><h3 data-i18n="set.server"></h3><p data-i18n="set.serverHint"></p></div>
+          <div class="seg" data-setting="server"><button data-value="auto" data-i18n="set.auto"></button><button data-value="cf">Cloudflare</button><button data-value="ls">LibreSpeed</button></div>
+        </div>
+        <div class="setting">
+          <div><h3 data-i18n="set.sound"></h3><p data-i18n="set.soundHint"></p></div>
+          <div class="seg" data-setting="sound"><button data-value="on" data-i18n="set.on"></button><button data-value="off" data-i18n="set.off"></button></div>
+        </div>
+        <div class="setting">
+          <div><h3 data-i18n="set.theme"></h3><p data-i18n="set.themeHint"></p></div>
+          <div class="seg" data-setting="theme"><button data-value="dark" data-i18n="set.dark"></button><button data-value="light" data-i18n="set.light"></button></div>
+        </div>
+        <div class="setting" id="installRow">
+          <div><h3 data-i18n="set.install"></h3><p data-i18n="set.installHint"></p></div>
+          <button class="share-btn" id="installBtn"><span data-i18n="set.installBtn"></span></button>
         </div>
       </div>
     </section>
   </main>
 
   <footer class="foot">
-    Замеры идут через публичные эндпоинты <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">speed.cloudflare.com</a> к ближайшему узлу.<br>
-    ZEPHYR · Скорость, которую видно
+    <div class="counters" id="counters"><span><span data-i18n="foot.visits"></span>: <b id="cVisits">—</b></span><span><span data-i18n="foot.tests"></span>: <b id="cTests">—</b></span></div>
+    <div data-i18n="foot.text"></div>
+    ZEPHYR · <span data-i18n="slogan"></span>
   </footer>
 </div>
+
+<div class="toast" id="toast" role="status"></div>
 
 <script>
 /* =====================================================================
    ZEPHYR · логика
-   Структура:
-   1) константы и состояние
-   2) утилиты и форматирование
-   3) спидометр
-   4) движок замера (ping / download / upload)
-   5) запуск теста и UI
-   6) оценка результата
-   7) история, статистика, графики
-   8) вкладки и настройки
+   1) словарь RU/EN          6) запуск теста и UI
+   2) константы и состояние  7) звук, вибрация, «поделиться»
+   3) утилиты                8) оценка результата
+   4) спидометр, ветер, график  9) история, статистика
+   5) серверы и движок замера   10) вкладки, настройки, офлайн, счётчик
    ===================================================================== */
 'use strict';
 
-/* ---------- 1. КОНСТАНТЫ И СОСТОЯНИЕ ---------- */
-const BASE = 'https://speed.cloudflare.com';   // публичный эндпоинт Cloudflare
-const PING_SAMPLES = 14;                         // сколько замеров пинга
-const DOWN_STREAMS = 4;                          // параллельных потоков на download
-const UP_STREAMS = 3;                            // параллельных потоков на upload
-const DOWN_CHUNK = 25e6;                         // размер одного запроса download, байт
-const GAUGE_MAX = 1000;                          // верх шкалы, Мбит/с (шкала логарифмическая)
-
-const C = { apricot: '#FF9E6D', lavender: '#B8A4FF', champagne: '#F2E6CF' };
-
-const state = {
-  settings: { unit: 'mbps', duration: 10, theme: 'dark' },
-  history: [],      // [{date, ping, jitter, down, up}] — сохраняется в localStorage этого браузера
-  run: null,        // активный тест: {aborted, reason, controllers, xhrs}
+/* ---------- 1. СЛОВАРЬ ---------- */
+const STR = {
+  ru: {
+    title: 'ZEPHYR — тест скорости интернета', slogan: 'Скорость, которую видно',
+    'tab.test': 'Тест', 'tab.history': 'История', 'tab.stats': 'Статистика', 'tab.guide': 'Что значат цифры', 'tab.guideShort': 'Гайд', 'tab.settings': 'Настройки',
+    'server.searching': 'Ищем ближайший узел…', 'server.node': 'Узел', 'server.offline': 'Нет сети', 'server.picking': 'Выбираем сервер…',
+    'offline.banner': 'Вы офлайн: сайт открыт из кэша. Тест заработает, когда вернётся интернет.',
+    'unit.mbps': 'Мбит/с', 'unit.MBps': 'МБ/с', 'unit.ms': 'мс',
+    'phase.ready': 'готов к замеру', 'phase.select': 'выбор сервера', 'phase.ping': 'пинг', 'phase.down': 'download', 'phase.up': 'upload',
+    'phase.result': 'download · итог', 'phase.aborted': 'тест прерван', 'phase.offline': 'нет сети', 'phase.error': 'ошибка',
+    'btn.start': 'Начать тест', 'btn.again': 'Запустить снова', 'btn.stop': 'Остановить',
+    'progress.title': 'Ход замера', 'm.ping': 'Пинг', 'm.jitter': 'Джиттер', 'm.loaded': 'Пинг под нагрузкой',
+    'm.loadedHint': 'Насколько растёт задержка, когда канал забит загрузкой',
+    'result.share': 'Поделиться', 'result.save': 'Скачать картинку',
+    'toast.saved': 'Картинка сохранена', 'toast.copied': 'Ссылка и результат скопированы', 'toast.savedCopied': 'Картинка сохранена, текст скопирован',
+    'toast.switch': 'Cloudflare недоступен, переключаюсь на запасной сервер', 'toast.installed': 'ZEPHYR установлен как приложение',
+    'share.text': 'Мой интернет в ZEPHYR: ↓ {down} · ↑ {up} · пинг {ping} мс',
+    'grade.0': 'Отлично', 'grade.0t': 'Сеть летает: можно всё и сразу, хоть на нескольких устройствах.',
+    'grade.1': 'Хорошо', 'grade.1t': 'Уверенный канал для дома: видео, игры и звонки без сюрпризов.',
+    'grade.2': 'Средне', 'grade.2t': 'Для повседневных задач хватит, на тяжёлых сценариях может проседать.',
+    'grade.3': 'Слабо', 'grade.3t': 'Канал узковат: базовый веб ок, а видео и звонки будут капризничать.',
+    'v.4k': 'Хватит для 4K', 'v.4ks': 'Стриминг в 4K/HDR без буферизации',
+    'v.fhd': 'Full HD без проблем', 'v.fhds': 'Для 4K скорости маловато',
+    'v.hd': 'HD-видео потянет', 'v.hds': '1080p может подтормаживать',
+    'v.sd': 'Видео только в низком качестве', 'v.sds': 'Для HD нужно от 5 Мбит/с',
+    'v.game': 'Подходит для онлайн-игр', 'v.games': 'Пинг {ping} мс, стабильно',
+    'v.gamem': 'Игры: терпимо', 'v.gamems': 'Для соревновательных игр задержка великовата',
+    'v.gameb': 'Для онлайн-игр не лучший вариант', 'v.gamebs': 'Высокий или нестабильный пинг',
+    'v.call': 'Видеозвонки в HD', 'v.calls': 'Zoom, Meet, Телемост: всё ок',
+    'v.callm': 'Звонки потянет', 'v.callms': 'Видео может снижать качество',
+    'v.callb': 'Видеозвонки будут тормозить', 'v.callbs': 'Upload ниже 1 Мбит/с',
+    'v.stream': 'Можно вести стримы 1080p', 'v.streams': 'И быстро выгружать файлы в облако',
+    'v.streamm': 'Стрим в 720p', 'v.streamms': 'Для 1080p60 нужно от 8–10 Мбит/с',
+    'v.streamb': 'Для своих стримов слабовато', 'v.streambs': 'Upload ниже 4 Мбит/с',
+    'v.bb': 'Пинг стабилен под нагрузкой', 'v.bbs': 'Загрузки не мешают играм и звонкам (рост +{inc} мс)',
+    'v.bbm': 'Под нагрузкой пинг подрастает', 'v.bbms': 'Рост +{inc} мс: при закачках возможны лаги',
+    'v.bbb': 'Сильный bufferbloat', 'v.bbbs': 'Рост +{inc} мс: когда кто-то качает, игры и звонки лагают',
+    'err.noServer': 'Серверы замера недоступны', 'err.noServerT': 'Не удалось достучаться ни до Cloudflare, ни до запасных серверов LibreSpeed. Проверьте подключение; их может блокировать VPN, сеть или блокировщик рекламы.',
+    'err.server': 'Сервер замера недоступен', 'err.serverT': 'Соединение с сервером замера оборвалось. Попробуйте ещё раз или выберите другой сервер в настройках.',
+    'err.status': 'Сервер замера ответил ошибкой', 'err.statusT': 'Код ответа {code}. Попробуйте ещё раз через минуту.',
+    'err.down': 'Не удалось скачать данные', 'err.downT': 'Сервер не прислал ни одного байта. Возможно, соединение блокируется.',
+    'err.up': 'Не удалось отправить данные', 'err.upT': 'Сервер не принял ни одного байта на этапе upload.',
+    'err.offline': 'Нет сети', 'err.offlineT': 'Браузер сообщает, что подключения к интернету нет. Проверьте Wi-Fi или кабель и попробуйте снова.',
+    'err.lost': 'Нет сети', 'err.lostT': 'Подключение пропало во время замера. Как только интернет вернётся, запустите тест заново.',
+    'err.aborted': 'Тест прерван', 'err.abortedT': 'Замер остановлен, результат не сохранён.',
+    'err.unknown': 'Что-то пошло не так', 'err.unknownT': 'Непредвиденная ошибка при замере: {msg}',
+    'history.title': 'История замеров', 'history.desc': 'Ваши замеры хранятся только в этом браузере на этом устройстве. Регистрация не нужна, другие посетители вашу историю не видят.',
+    'history.trend': 'Динамика', 'history.all': 'Все замеры', 'history.clear': 'Очистить историю', 'history.confirm': 'Точно очистить?',
+    'th.date': 'Дата', 'th.ping': 'Пинг', 'th.jitter': 'Джиттер', 'th.loaded': 'Под нагрузкой', 'th.server': 'Сервер', 'badge.last': 'последний',
+    'empty.h': 'Замеров ещё не было', 'empty.hT': 'Результаты каждого теста будут появляться здесь.',
+    'empty.c': 'Пока пусто', 'empty.cT': 'Запустите первый тест, и здесь появится график.',
+    'empty.s': 'Статистики пока нет', 'empty.sT': 'Нужен хотя бы один замер.',
+    'empty.nochart': 'Графики недоступны', 'empty.nochartT': 'Не загрузилась библиотека Chart.js (нужен интернет).',
+    'stats.title': 'Статистика', 'stats.desc': 'Средние, лучшие и худшие значения по всем вашим замерам на этом устройстве.',
+    'stats.avg': 'среднее', 'stats.best': 'Лучший', 'stats.worst': 'Худший', 'stats.count': 'Замеров',
+    'guide.title': 'Что значат цифры', 'guide.desc': 'Коротко о том, на что смотреть в результатах и какая скорость нужна под конкретные задачи. Значения ориентировочные, на одно устройство.',
+    'guide.terms': [
+      ['Пинг', 'Время, за которое сигнал доходит до сервера и обратно. Чем меньше, тем отзывчивее сеть.'],
+      ['Джиттер', 'Насколько скачет пинг. Высокий джиттер даёт рывки в играх и «робота» в звонках.'],
+      ['Под нагрузкой', 'Пинг, пока канал забит закачкой. Если он сильно растёт (bufferbloat), игры лагают, когда кто-то дома качает.'],
+      ['Download', 'Скорость получения данных: видео, сайты, загрузки, обновления игр.'],
+      ['Upload', 'Скорость отправки: видеосвязь, стримы, выгрузка файлов в облако.'],
+    ],
+    'guide.cards': [
+      ['Стриминг видео', 'Смотрим download. Если дома несколько экранов, скорости складываются.',
+        [['SD (480p)', 'от 3 Мбит/с'], ['HD (720p)', 'от 5 Мбит/с'], ['Full HD (1080p)', 'от 10 Мбит/с'], ['4K / HDR', 'от 25 Мбит/с']]],
+      ['Онлайн-игры', 'Для игр скорость вторична: важны пинг, его стабильность и поведение под нагрузкой.',
+        [['Пинг: комфортно', 'до 40 мс'], ['Пинг: терпимо', '40–80 мс'], ['Джиттер', 'до 15 мс'], ['Рост под нагрузкой', 'до +30 мс']]],
+      ['Видеозвонки', 'Здесь работает и upload: вы ведь тоже отправляете видео.',
+        [['Голосовой звонок', 'от 0,5 Мбит/с'], ['Видео 1-на-1 в HD', 'от 1,5–3 Мбит/с'], ['Групповой созвон', 'от 3–4 Мбит/с'], ['Пинг', 'до 100 мс']]],
+      ['Свои стримы и облако', 'Для трансляций и бэкапов решает upload. Берите запас ~30%.',
+        [['Стрим 720p30', 'от 4 Мбит/с'], ['Стрим 1080p60', 'от 8–10 Мбит/с'], ['Стрим 4K', 'от 25 Мбит/с'], ['1 ГБ в облако при 50 Мбит/с', '≈ 3 мин']]],
+    ],
+    'guide.unitsTitle': 'Мбит/с или МБ/с?',
+    'guide.unitsText': 'Провайдеры пишут скорость в мегабитах (Мбит/с), а браузер и торренты показывают мегабайты (МБ/с). В одном байте 8 бит, так что 100 Мбит/с ≈ 12,5 МБ/с. Переключить единицы можно в настройках.',
+    'settings.title': 'Настройки', 'settings.desc': 'Под себя: язык, единицы, длительность, сервер, звук и тема.',
+    'set.lang': 'Язык', 'set.langHint': 'Язык интерфейса сайта.',
+    'set.unit': 'Единицы скорости', 'set.unitHint': 'Мегабиты, как у провайдера, или мегабайты, как в браузере.',
+    'set.duration': 'Длительность теста', 'set.durationHint': 'Время на каждый этап (download и upload). Дольше значит точнее, особенно на быстрых каналах.',
+    'set.s6': '6 с', 'set.s10': '10 с', 'set.s15': '15 с',
+    'set.server': 'Сервер замера', 'set.serverHint': 'Авто: Cloudflare, а если он недоступен, ближайший сервер LibreSpeed.', 'set.auto': 'Авто',
+    'set.sound': 'Звук и вибрация', 'set.soundHint': 'Мягкий сигнал и вибрация на телефоне в конце замера.', 'set.on': 'Вкл', 'set.off': 'Выкл',
+    'set.theme': 'Тема', 'set.themeHint': 'Тёмная изумрудная или светлая песочная.', 'set.dark': 'Тёмная', 'set.light': 'Светлая',
+    'set.install': 'Приложение', 'set.installHint': 'Установите ZEPHYR на рабочий стол или главный экран: откроется в своём окне и работает офлайн.', 'set.installBtn': 'Установить',
+    'foot.visits': 'Посещений', 'foot.tests': 'Тестов проведено',
+    'foot.text': 'Замеры идут через публичные серверы <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a> и <a href="https://librespeed.org" target="_blank" rel="noopener">LibreSpeed</a>.',
+    'card.download': 'DOWNLOAD', 'card.upload': 'UPLOAD', 'card.ping': 'ПИНГ', 'card.jitter': 'ДЖИТТЕР', 'card.loaded': 'ПОД НАГРУЗКОЙ', 'card.grade': 'Оценка',
+  },
+  en: {
+    title: 'ZEPHYR — internet speed test', slogan: 'Speed you can see',
+    'tab.test': 'Test', 'tab.history': 'History', 'tab.stats': 'Stats', 'tab.guide': 'What the numbers mean', 'tab.guideShort': 'Guide', 'tab.settings': 'Settings',
+    'server.searching': 'Finding the nearest server…', 'server.node': 'Server', 'server.offline': 'Offline', 'server.picking': 'Picking a server…',
+    'offline.banner': "You're offline: the site is running from cache. The test will work once you're back online.",
+    'unit.mbps': 'Mbps', 'unit.MBps': 'MB/s', 'unit.ms': 'ms',
+    'phase.ready': 'ready', 'phase.select': 'picking server', 'phase.ping': 'ping', 'phase.down': 'download', 'phase.up': 'upload',
+    'phase.result': 'download · result', 'phase.aborted': 'test stopped', 'phase.offline': 'offline', 'phase.error': 'error',
+    'btn.start': 'Start test', 'btn.again': 'Run again', 'btn.stop': 'Stop',
+    'progress.title': 'Progress', 'm.ping': 'Ping', 'm.jitter': 'Jitter', 'm.loaded': 'Loaded latency',
+    'm.loadedHint': 'How much latency grows while the line is busy',
+    'result.share': 'Share', 'result.save': 'Save image',
+    'toast.saved': 'Image saved', 'toast.copied': 'Link and result copied', 'toast.savedCopied': 'Image saved, text copied',
+    'toast.switch': 'Cloudflare is unavailable, switching to a backup server', 'toast.installed': 'ZEPHYR installed as an app',
+    'share.text': 'My internet on ZEPHYR: ↓ {down} · ↑ {up} · ping {ping} ms',
+    'grade.0': 'Excellent', 'grade.0t': 'Your connection flies: everything at once, even on several devices.',
+    'grade.1': 'Good', 'grade.1t': 'A solid home connection: video, games and calls without surprises.',
+    'grade.2': 'Fair', 'grade.2t': 'Fine for everyday use, may struggle under heavy load.',
+    'grade.3': 'Weak', 'grade.3t': 'A narrow line: basic browsing is fine, video and calls will stutter.',
+    'v.4k': 'Ready for 4K', 'v.4ks': '4K/HDR streaming without buffering',
+    'v.fhd': 'Full HD, no problem', 'v.fhds': 'A bit short for 4K',
+    'v.hd': 'HD video works', 'v.hds': '1080p may stutter',
+    'v.sd': 'Low-quality video only', 'v.sds': 'HD needs 5 Mbps or more',
+    'v.game': 'Good for online gaming', 'v.games': 'Ping {ping} ms, stable',
+    'v.gamem': 'Gaming: playable', 'v.gamems': 'A bit too much latency for competitive games',
+    'v.gameb': 'Not great for online gaming', 'v.gamebs': 'High or unstable ping',
+    'v.call': 'HD video calls', 'v.calls': 'Zoom, Meet, Teams: all good',
+    'v.callm': 'Calls will work', 'v.callms': 'Video quality may drop',
+    'v.callb': 'Video calls will lag', 'v.callbs': 'Upload below 1 Mbps',
+    'v.stream': 'Ready to stream in 1080p', 'v.streams': 'And to upload files to the cloud fast',
+    'v.streamm': '720p streaming', 'v.streamms': '1080p60 needs 8–10 Mbps',
+    'v.streamb': 'Too slow for streaming', 'v.streambs': 'Upload below 4 Mbps',
+    'v.bb': 'Latency stays stable under load', 'v.bbs': 'Downloads won’t hurt games or calls (+{inc} ms)',
+    'v.bbm': 'Latency rises under load', 'v.bbms': '+{inc} ms: some lag while downloading',
+    'v.bbb': 'Heavy bufferbloat', 'v.bbbs': '+{inc} ms: games and calls lag when someone downloads',
+    'err.noServer': 'Test servers unreachable', 'err.noServerT': "Couldn't reach Cloudflare or the LibreSpeed backup servers. Check your connection; a VPN, network or ad blocker may be blocking them.",
+    'err.server': 'Test server unavailable', 'err.serverT': 'The connection to the test server dropped. Try again or pick another server in settings.',
+    'err.status': 'Test server returned an error', 'err.statusT': 'Response code {code}. Try again in a minute.',
+    'err.down': "Couldn't download data", 'err.downT': "The server didn't send a single byte. The connection may be blocked.",
+    'err.up': "Couldn't upload data", 'err.upT': "The server didn't accept a single byte during upload.",
+    'err.offline': 'Offline', 'err.offlineT': 'Your browser reports no internet connection. Check Wi-Fi or cable and try again.',
+    'err.lost': 'Offline', 'err.lostT': 'The connection dropped during the test. Run it again once you’re back online.',
+    'err.aborted': 'Test stopped', 'err.abortedT': 'The test was stopped, nothing was saved.',
+    'err.unknown': 'Something went wrong', 'err.unknownT': 'Unexpected error during the test: {msg}',
+    'history.title': 'Test history', 'history.desc': 'Your results are stored only in this browser on this device. No sign-up, and other visitors can’t see your history.',
+    'history.trend': 'Trend', 'history.all': 'All tests', 'history.clear': 'Clear history', 'history.confirm': 'Sure?',
+    'th.date': 'Date', 'th.ping': 'Ping', 'th.jitter': 'Jitter', 'th.loaded': 'Loaded', 'th.server': 'Server', 'badge.last': 'latest',
+    'empty.h': 'No tests yet', 'empty.hT': 'Each test result will show up here.',
+    'empty.c': 'Nothing here yet', 'empty.cT': 'Run your first test to see the chart.',
+    'empty.s': 'No stats yet', 'empty.sT': 'At least one test is needed.',
+    'empty.nochart': 'Charts unavailable', 'empty.nochartT': 'Chart.js failed to load (internet required).',
+    'stats.title': 'Stats', 'stats.desc': 'Average, best and worst values across all your tests on this device.',
+    'stats.avg': 'average', 'stats.best': 'Best', 'stats.worst': 'Worst', 'stats.count': 'Tests',
+    'guide.title': 'What the numbers mean', 'guide.desc': 'What to look at in your results and how much speed you need for specific tasks. Rough values per device.',
+    'guide.terms': [
+      ['Ping', 'The round-trip time to the server and back. Lower means a more responsive connection.'],
+      ['Jitter', 'How much ping fluctuates. High jitter causes stutter in games and robotic voice in calls.'],
+      ['Loaded', 'Ping while the line is saturated. If it grows a lot (bufferbloat), games lag when someone downloads.'],
+      ['Download', 'How fast you receive data: video, websites, downloads, game updates.'],
+      ['Upload', 'How fast you send data: video calls, streams, cloud backups.'],
+    ],
+    'guide.cards': [
+      ['Video streaming', 'Look at download. With several screens at home, the speeds add up.',
+        [['SD (480p)', '3 Mbps+'], ['HD (720p)', '5 Mbps+'], ['Full HD (1080p)', '10 Mbps+'], ['4K / HDR', '25 Mbps+']]],
+      ['Online gaming', 'Speed is secondary for games: ping, its stability and behaviour under load matter.',
+        [['Ping: comfortable', 'under 40 ms'], ['Ping: playable', '40–80 ms'], ['Jitter', 'under 15 ms'], ['Growth under load', 'under +30 ms']]],
+      ['Video calls', 'Upload matters here too: you are sending video as well.',
+        [['Voice call', '0.5 Mbps+'], ['1-on-1 HD video', '1.5–3 Mbps+'], ['Group call', '3–4 Mbps+'], ['Ping', 'under 100 ms']]],
+      ['Streaming & cloud', 'For broadcasts and backups, upload decides. Keep ~30% headroom.',
+        [['Stream 720p30', '4 Mbps+'], ['Stream 1080p60', '8–10 Mbps+'], ['Stream 4K', '25 Mbps+'], ['1 GB to cloud at 50 Mbps', '≈ 3 min']]],
+    ],
+    'guide.unitsTitle': 'Mbps or MB/s?',
+    'guide.unitsText': 'ISPs quote speed in megabits (Mbps), while browsers and torrent clients show megabytes (MB/s). A byte is 8 bits, so 100 Mbps ≈ 12.5 MB/s. You can switch units in settings.',
+    'settings.title': 'Settings', 'settings.desc': 'Make it yours: language, units, duration, server, sound and theme.',
+    'set.lang': 'Language', 'set.langHint': 'Interface language.',
+    'set.unit': 'Speed units', 'set.unitHint': 'Megabits like your ISP, or megabytes like your browser.',
+    'set.duration': 'Test duration', 'set.durationHint': 'Time per stage (download and upload). Longer is more accurate, especially on fast lines.',
+    'set.s6': '6 s', 'set.s10': '10 s', 'set.s15': '15 s',
+    'set.server': 'Test server', 'set.serverHint': 'Auto: Cloudflare, or the nearest LibreSpeed server if Cloudflare is unavailable.', 'set.auto': 'Auto',
+    'set.sound': 'Sound & vibration', 'set.soundHint': 'A soft chime and phone vibration when the test finishes.', 'set.on': 'On', 'set.off': 'Off',
+    'set.theme': 'Theme', 'set.themeHint': 'Dark emerald or light sand.', 'set.dark': 'Dark', 'set.light': 'Light',
+    'set.install': 'App', 'set.installHint': 'Install ZEPHYR on your desktop or home screen: it opens in its own window and works offline.', 'set.installBtn': 'Install',
+    'foot.visits': 'Visits', 'foot.tests': 'Tests run',
+    'foot.text': 'Tests run against public <a href="https://speed.cloudflare.com" target="_blank" rel="noopener">Cloudflare</a> and <a href="https://librespeed.org" target="_blank" rel="noopener">LibreSpeed</a> servers.',
+    'card.download': 'DOWNLOAD', 'card.upload': 'UPLOAD', 'card.ping': 'PING', 'card.jitter': 'JITTER', 'card.loaded': 'LOADED', 'card.grade': 'Grade',
+  },
 };
 
-// Настройки (не история!) запоминаем в браузере для удобства, если это разрешено
-try {
-  const saved = JSON.parse(localStorage.getItem('zephyr-settings') || 'null');
-  if (saved) Object.assign(state.settings, saved);
-} catch (e) { /* хранилище недоступно — работаем с дефолтами */ }
+/* ---------- 2. КОНСТАНТЫ И СОСТОЯНИЕ ---------- */
+const CF_BASE = 'https://speed.cloudflare.com';
+const SITE_URL = 'https://zephyr-speed.github.io';
+const COUNTER = 'https://abacus.jasoncameron.dev';   // бесплатный счётчик без регистрации
+const COUNTER_NS = 'zephyr-speed-github-io';
+const PING_SAMPLES = 14;
+const DOWN_STREAMS = 4;
+const UP_STREAMS = 3;
+const DOWN_CHUNK = 25e6;
+const GAUGE_MAX = 1000;
+const C = { apricot: '#FF9E6D', lavender: '#B8A4FF', champagne: '#F2E6CF', bg: '#08201B', bg2: '#0E2E27', muted: '#7FA39A', text: '#EAF2EF' };
+
+// Запасные серверы LibreSpeed (проверены: отдают CORS при ?cors=true)
+const LS_SERVERS = [
+  ['Prague', 'https://librespeed.turris.cz/', 'backend/'],
+  ['Poznań', 'https://speedtest.kamilszczepanski.com/', ''],
+  ['Prague · CESNET', 'https://speedtest.cesnet.cz/', 'backend/'],
+  ['Frankfurt', 'https://fra.speedtest.clouvider.net/backend/', ''],
+  ['Amsterdam', 'https://ams.speedtest.clouvider.net/backend/', ''],
+  ['Belgrade', 'https://speedtest1.sox.rs/librespeed/', 'backend/'],
+  ['Frankfurt · FS-IT', 'https://speed.fs-it.systems/', 'backend/'],
+  ['London', 'https://lon.speedtest.clouvider.net/backend/', ''],
+];
+
+const state = {
+  settings: { unit: 'mbps', duration: 10, theme: 'dark', lang: (navigator.language || 'ru').toLowerCase().startsWith('ru') ? 'ru' : 'en', server: 'auto', sound: 'on' },
+  history: [],      // [{date, ping, jitter, down, up, ld, lu, srv}] — в localStorage этого браузера
+  run: null,        // активный тест
+  provider: null,   // выбранный сервер
+  live: { down: [], up: [] }, // точки живого графика
+  last: null,       // последний результат (для «поделиться»)
+};
+
+try { const s = JSON.parse(localStorage.getItem('zephyr-settings') || 'null'); if (s) Object.assign(state.settings, s); } catch (e) {}
 function saveSettings() { try { localStorage.setItem('zephyr-settings', JSON.stringify(state.settings)); } catch (e) {} }
 
-/* История замеров: у каждого посетителя своя, хранится в его браузере (localStorage).
-   Без регистрации и без сервера. Если хранилище недоступно (приватный режим и т.п.),
-   история просто живёт до перезагрузки страницы. */
 const HISTORY_KEY = 'zephyr-history';
-const HISTORY_LIMIT = 300; // чтобы не раздувать хранилище
+const HISTORY_LIMIT = 300;
 try {
   const raw = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-  if (Array.isArray(raw)) {
-    state.history = raw
-      .filter((r) => r && isFinite(r.down) && isFinite(r.up) && isFinite(r.ping))
-      .map((r) => ({ date: new Date(r.date), ping: +r.ping, jitter: +r.jitter || 0, down: +r.down, up: +r.up }));
-  }
-} catch (e) { /* битые данные или нет доступа — начинаем с пустой истории */ }
+  if (Array.isArray(raw)) state.history = raw
+    .filter((r) => r && isFinite(r.down) && isFinite(r.up) && isFinite(r.ping))
+    .map((r) => ({ date: new Date(r.date), ping: +r.ping, jitter: +r.jitter || 0, down: +r.down, up: +r.up,
+      ld: r.ld == null ? null : +r.ld, lu: r.lu == null ? null : +r.lu, srv: r.srv || '' }));
+} catch (e) {}
 function saveHistory() {
   if (state.history.length > HISTORY_LIMIT) state.history = state.history.slice(-HISTORY_LIMIT);
   try { localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.map((r) => ({ ...r, date: r.date.toISOString() })))); } catch (e) {}
 }
 
-/* ---------- 2. УТИЛИТЫ ---------- */
+/* ---------- 3. УТИЛИТЫ ---------- */
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const rnd = () => Math.random().toString(36).slice(2);
+const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+// Перевод: t('key', {var: value})
+function t(key, vars) {
+  let s = (STR[state.settings.lang] || STR.ru)[key];
+  if (s == null) s = STR.ru[key];
+  if (s == null) return key;
+  if (vars && typeof s === 'string') s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? vars[k] : ''));
+  return s;
+}
+const locale = () => (state.settings.lang === 'ru' ? 'ru-RU' : 'en-US');
 
 class AbortedError extends Error { constructor(msg) { super(msg); this.name = 'AbortedError'; } }
-class NetError extends Error { constructor(title, text) { super(title); this.name = 'NetError'; this.text = text; } }
+class NetError extends Error { constructor(key, vars) { super(key); this.name = 'NetError'; this.key = key; this.vars = vars; } }
 
-const unitLabel = () => (state.settings.unit === 'mbps' ? 'Мбит/с' : 'МБ/с');
+const unitLabel = () => t(state.settings.unit === 'mbps' ? 'unit.mbps' : 'unit.MBps');
 const toUnit = (mbps) => (state.settings.unit === 'mbps' ? mbps : mbps / 8);
 function fmtNum(v) {
   if (v == null || !isFinite(v)) return '—';
   const d = v < 10 ? 2 : v < 100 ? 1 : 0;
-  return v.toLocaleString('ru-RU', { minimumFractionDigits: d, maximumFractionDigits: d });
+  return v.toLocaleString(locale(), { minimumFractionDigits: d, maximumFractionDigits: d });
 }
 const fmtSpeed = (mbps) => fmtNum(mbps == null ? null : toUnit(mbps));
-const fmtMs = (ms) => (ms == null || !isFinite(ms) ? '—' : ms < 10 ? ms.toFixed(1).replace('.', ',') : Math.round(ms).toString());
+const fmtMs = (ms) => {
+  if (ms == null || !isFinite(ms)) return '—';
+  return ms < 10 ? ms.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : String(Math.round(ms));
+};
 const median = (a) => { const s = [...a].sort((x, y) => x - y); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
 
-/* ---------- 3. СПИДОМЕТР ---------- */
+let toastTimer = null;
+function toast(msg) {
+  const el = $('#toast'); el.textContent = msg; el.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* ---------- 4. СПИДОМЕТР ---------- */
 const G = { cx: 150, cy: 158, r: 118, start: 135, sweep: 270 };
-const polar = (deg, r = G.r) => {
-  const a = (deg * Math.PI) / 180;
-  return [G.cx + r * Math.cos(a), G.cy + r * Math.sin(a)];
-};
-// Логарифмическая шкала: 0..1000 Мбит/с → 0..1
+const polar = (deg, r = G.r) => { const a = (deg * Math.PI) / 180; return [G.cx + r * Math.cos(a), G.cy + r * Math.sin(a)]; };
 const speedToFrac = (mbps) => Math.min(1, Math.log1p(Math.max(0, mbps)) / Math.log1p(GAUGE_MAX));
 const ARC_LEN = G.r * (G.sweep * Math.PI / 180);
 
@@ -766,59 +975,144 @@ function buildGauge() {
   const [sx, sy] = polar(G.start), [ex, ey] = polar(G.start + G.sweep);
   const d = `M${sx} ${sy} A${G.r} ${G.r} 0 1 1 ${ex} ${ey}`;
   ['arcTrack', 'arcValue', 'arcGlowPath'].forEach((id) => $('#' + id).setAttribute('d', d));
-  ['arcValue', 'arcGlowPath'].forEach((id) => {
-    const el = $('#' + id);
-    el.style.strokeDasharray = ARC_LEN;
-    el.style.strokeDashoffset = ARC_LEN;
-  });
+  ['arcValue', 'arcGlowPath'].forEach((id) => { const el = $('#' + id); el.style.strokeDasharray = ARC_LEN; el.style.strokeDashoffset = ARC_LEN; });
   drawTicks();
 }
-// Риски и подписи шкалы зависят от выбранных единиц
 function drawTicks() {
-  const ticks = state.settings.unit === 'mbps'
-    ? [0, 5, 10, 50, 100, 250, 500, 1000]
-    : [0, 1, 2, 5, 10, 25, 50, 125];
-  const g = $('#gaugeTicks');
+  const ticks = state.settings.unit === 'mbps' ? [0, 5, 10, 50, 100, 250, 500, 1000] : [0, 1, 2, 5, 10, 25, 50, 125];
   let html = '';
-  // мелкие риски
   for (let i = 0; i <= 54; i++) {
     const deg = G.start + (G.sweep * i) / 54;
     const [x1, y1] = polar(deg, G.r - 16), [x2, y2] = polar(deg, G.r - (i % 6 === 0 ? 24 : 19));
     html += `<line class="tick" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" opacity="${i % 6 === 0 ? 1 : .5}"/>`;
   }
-  // подписи
-  ticks.forEach((t) => {
-    const mbps = state.settings.unit === 'mbps' ? t : t * 8;
-    const deg = G.start + G.sweep * speedToFrac(mbps);
-    const [x, y] = polar(deg, G.r - 40);
-    html += `<text class="tick-label" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle">${t}</text>`;
+  ticks.forEach((tk) => {
+    const mbps = state.settings.unit === 'mbps' ? tk : tk * 8;
+    const [x, y] = polar(G.start + G.sweep * speedToFrac(mbps), G.r - 40);
+    html += `<text class="tick-label" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle">${tk}</text>`;
   });
-  g.innerHTML = html;
+  $('#gaugeTicks').innerHTML = html;
 }
 
-// Плавная анимация стрелки: цель задаём, кадр догоняет
-const gauge = { target: 0, shown: 0, mode: 'idle', number: null };
-function setGauge(mbps) { gauge.target = mbps; }
-function gaugeLoop() {
+const gauge = { target: 0, shown: 0, mode: 'idle' };
+const setGauge = (mbps) => { gauge.target = mbps; };
+
+/* «Волна ветра»: потоки воздуха за спидометром. Скорость и яркость зависят от текущей скорости. */
+const wind = { canvas: null, ctx: null, w: 0, h: 0, t: 0, lines: [], energy: 0 };
+function setupWind() {
+  wind.canvas = $('#windCanvas'); wind.ctx = wind.canvas.getContext('2d');
+  wind.lines = Array.from({ length: 16 }, (_, i) => ({ y: (i + 0.5) / 16, amp: 6 + Math.random() * 18, freq: 0.004 + Math.random() * 0.006, ph: Math.random() * Math.PI * 2, sp: 0.6 + Math.random() * 0.9, w: 0.6 + Math.random() * 1.4 }));
+  resizeWind();
+}
+function resizeWind() {
+  if (!wind.canvas) return;
+  const r = wind.canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  wind.w = r.width; wind.h = r.height;
+  wind.canvas.width = Math.max(1, r.width * dpr); wind.canvas.height = Math.max(1, r.height * dpr);
+  wind.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+function drawWind(dt) {
+  const { ctx, w, h } = wind; if (!ctx || !w) return;
+  const running = gauge.mode === 'down' || gauge.mode === 'up';
+  const targetEnergy = running ? 0.25 + speedToFrac(gauge.shown) * 0.95 : 0.12;
+  wind.energy += (targetEnergy - wind.energy) * 0.04;
+  wind.t += dt * (0.4 + wind.energy * 3.2);
+  ctx.clearRect(0, 0, w, h);
+  const light = state.settings.theme === 'light';
+  const col = gauge.mode === 'up' ? C.lavender : gauge.mode === 'down' ? C.apricot : (light ? '#08201B' : C.champagne);
+  ctx.lineCap = 'round';
+  for (const L of wind.lines) {
+    const baseY = L.y * h;
+    const alpha = (light ? 0.05 : 0.04) + wind.energy * 0.18 * (0.5 + 0.5 * Math.sin(wind.t * 0.7 + L.ph));
+    ctx.strokeStyle = col; ctx.globalAlpha = Math.max(0, Math.min(0.4, alpha));
+    ctx.lineWidth = L.w;
+    ctx.beginPath();
+    // «порыв»: короткий видимый отрезок линии, бегущий слева направо
+    const len = w * (0.25 + wind.energy * 0.35);
+    const head = ((wind.t * 120 * L.sp + L.ph * 200) % (w + len * 2)) - len;
+    for (let x = Math.max(0, head - len); x <= Math.min(w, head); x += 6) {
+      const y = baseY + Math.sin(x * L.freq + wind.t * L.sp + L.ph) * L.amp * (0.6 + wind.energy);
+      x === Math.max(0, head - len) ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* Живой график скорости: download слева, upload справа */
+const live = { canvas: null, ctx: null, w: 0, h: 0 };
+function setupLive() { live.canvas = $('#liveChart'); live.ctx = live.canvas.getContext('2d'); resizeLive(); }
+function resizeLive() {
+  if (!live.canvas) return;
+  const r = live.canvas.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
+  live.w = r.width; live.h = r.height;
+  live.canvas.width = Math.max(1, r.width * dpr); live.canvas.height = Math.max(1, r.height * dpr);
+  live.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawLive();
+}
+function drawLive() {
+  const { ctx, w, h } = live; if (!ctx || !w) return;
+  ctx.clearRect(0, 0, w, h);
+  const all = state.live.down.concat(state.live.up).map((p) => p.v);
+  const max = Math.max(1, ...all) * 1.15;
+  const half = w / 2 - 6;
+  // базовая линия
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--line'); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, h - 0.5); ctx.lineTo(w, h - 0.5); ctx.stroke();
+  const series = (pts, x0, color) => {
+    if (pts.length < 2) return;
+    const tMax = Math.max(1, pts[pts.length - 1].t, state.settings.duration * 1000);
+    const X = (p) => x0 + (p.t / tMax) * half, Y = (p) => h - 2 - (p.v / max) * (h - 8);
+    const g = ctx.createLinearGradient(0, 0, 0, h); g.addColorStop(0, color + '66'); g.addColorStop(1, color + '00');
+    ctx.beginPath(); ctx.moveTo(X(pts[0]), h);
+    pts.forEach((p) => ctx.lineTo(X(p), Y(p)));
+    ctx.lineTo(X(pts[pts.length - 1]), h); ctx.closePath(); ctx.fillStyle = g; ctx.fill();
+    ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(X(p), Y(p)) : ctx.moveTo(X(p), Y(p))));
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
+    const lp = pts[pts.length - 1];
+    ctx.beginPath(); ctx.arc(X(lp), Y(lp), 3, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+  };
+  series(state.live.down, 0, C.apricot);
+  series(state.live.up, w / 2 + 6, C.lavender);
+}
+
+/* Главный цикл анимации: стрелка + ветер */
+let lastFrame = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastFrame) / 1000); lastFrame = now;
   gauge.shown += (gauge.target - gauge.shown) * 0.12;
   if (Math.abs(gauge.target - gauge.shown) < 0.005) gauge.shown = gauge.target;
-  const f = speedToFrac(gauge.shown);
-  const off = ARC_LEN * (1 - f);
+  const f = speedToFrac(gauge.shown), off = ARC_LEN * (1 - f);
   $('#arcValue').style.strokeDashoffset = off;
   $('#arcGlowPath').style.strokeDashoffset = off;
-  const tip = $('#arcTip');
-  const [x, y] = polar(G.start + G.sweep * f);
+  const tip = $('#arcTip'), [x, y] = polar(G.start + G.sweep * f);
   tip.setAttribute('cx', x); tip.setAttribute('cy', y);
   tip.setAttribute('opacity', f > 0.002 ? 1 : 0);
   tip.setAttribute('fill', gauge.mode === 'up' ? C.lavender : gauge.mode === 'down' ? C.apricot : C.champagne);
-  // число в центре: при замере скорости — анимированное значение
-  if (gauge.mode === 'down' || gauge.mode === 'up' || gauge.mode === 'idle-speed') {
-    $('#gaugeValue').textContent = fmtSpeed(gauge.shown);
-  }
-  requestAnimationFrame(gaugeLoop);
+  if (gauge.mode === 'down' || gauge.mode === 'up' || gauge.mode === 'idle-speed') $('#gaugeValue').textContent = fmtSpeed(gauge.shown);
+  if (!document.hidden && $('#tab-test').classList.contains('active') && !reducedMotion) drawWind(dt);
+  requestAnimationFrame(frame);
 }
+const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/* ---------- 4. ДВИЖОК ЗАМЕРА ---------- */
+/* ---------- 5. СЕРВЕРЫ И ДВИЖОК ЗАМЕРА ---------- */
+// Единый интерфейс сервера: ping(), down(bytes), up(), maxUp — максимальный размер одного upload-запроса
+const CF_PROVIDER = {
+  id: 'cf', label: 'Cloudflare', maxUp: 32 << 20,
+  ping: () => `${CF_BASE}/__down?bytes=0&_=${rnd()}`,
+  down: (b) => `${CF_BASE}/__down?bytes=${b}&_=${rnd()}`,
+  up: () => `${CF_BASE}/__up?_=${rnd()}`,
+};
+const LS_PROVIDERS = LS_SERVERS.map(([city, base, pre]) => {
+  const u = (f) => `${base}${pre}${f}?cors=true&r=${rnd()}`;
+  return {
+    id: 'ls', label: `LibreSpeed · ${city}`, city, maxUp: 8 << 20,
+    ping: () => u('empty.php'),
+    down: (b) => u('garbage.php') + `&ckSize=${Math.max(1, Math.round(b / 1048576))}`,
+    up: () => u('empty.php'),
+  };
+});
+
 function abortAll() {
   const r = state.run; if (!r) return;
   r.controllers.forEach((c) => { try { c.abort(); } catch (e) {} });
@@ -826,7 +1120,49 @@ function abortAll() {
   r.controllers.clear(); r.xhrs.clear();
 }
 function checkAbort() { if (state.run.aborted) throw new AbortedError(state.run.reason); }
-// Скорость по окну последних winMs миллисекунд, Мбит/с
+
+// Один запрос пинга с таймаутом; точное время из Resource Timing, если сервер его отдаёт
+async function pingOnce(provider, timeoutMs = 6000) {
+  const url = provider.ping();
+  const ctrl = new AbortController();
+  if (state.run) state.run.controllers.add(ctrl);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  const t0 = performance.now();
+  try {
+    const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+    await res.arrayBuffer();
+    if (!res.ok) throw new NetError('err.status', { code: res.status });
+    let rtt = performance.now() - t0;
+    const e = performance.getEntriesByName(url).pop();
+    if (e && e.requestStart > 0 && e.responseStart > e.requestStart) rtt = e.responseStart - e.requestStart;
+    return rtt;
+  } finally {
+    clearTimeout(timer);
+    if (state.run) state.run.controllers.delete(ctrl);
+    if (performance.getEntriesByType('resource').length > 120) performance.clearResourceTimings();
+  }
+}
+// Проба сервера: 2 запроса (первый с установкой соединения), берём второй
+async function probe(provider, timeoutMs = 3500) {
+  try { await pingOnce(provider, timeoutMs); return await pingOnce(provider, timeoutMs); } catch (e) { return Infinity; }
+}
+async function pickLibreSpeed() {
+  const res = await Promise.all(LS_PROVIDERS.map(async (p) => ({ p, ms: await probe(p) })));
+  if (state.run) checkAbort();
+  res.sort((a, b) => a.ms - b.ms);
+  return isFinite(res[0].ms) ? res[0].p : null;
+}
+async function selectProvider() {
+  const mode = state.settings.server;
+  if (mode === 'cf') return CF_PROVIDER;
+  if (mode === 'ls') { const p = await pickLibreSpeed(); if (!p) throw new NetError('err.noServer'); return p; }
+  if (isFinite(await probe(CF_PROVIDER, 4000))) return CF_PROVIDER;
+  checkAbort();
+  toast(t('toast.switch'));
+  const p = await pickLibreSpeed(); if (!p) throw new NetError('err.noServer'); return p;
+}
+
+// Скорость по окну последних winMs, Мбит/с
 function windowSpeed(samples, winMs) {
   const last = samples[samples.length - 1];
   let first = samples[0];
@@ -834,7 +1170,7 @@ function windowSpeed(samples, winMs) {
   const dt = (last.t - first.t) / 1000;
   return dt > 0 ? ((last.b - first.b) * 8) / dt / 1e6 : 0;
 }
-// Итоговая скорость: без первых секунд «разгона» TCP
+// Итог без первых секунд «разгона» TCP
 function finalSpeed(samples, warmMs) {
   const last = samples[samples.length - 1];
   const first = samples.find((s) => s.t >= warmMs) || samples[0];
@@ -842,115 +1178,115 @@ function finalSpeed(samples, warmMs) {
   return dt > 0.3 ? ((last.b - first.b) * 8) / dt / 1e6 : windowSpeed(samples, 1e9);
 }
 
-/** ПИНГ И ДЖИТТЕР: серия пустых запросов, берём медиану RTT. */
-async function measurePing(onSample) {
+/** ПИНГ И ДЖИТТЕР в простое */
+async function measurePing(provider, onSample) {
   const rtts = [];
   for (let i = 0; i <= PING_SAMPLES; i++) {
     checkAbort();
-    const url = `${BASE}/__down?bytes=0&_=${Date.now()}_${i}`;
-    const ctrl = new AbortController(); state.run.controllers.add(ctrl);
-    const timeout = setTimeout(() => ctrl.abort(), 6000);
-    const t0 = performance.now();
-    let res;
-    try {
-      res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
-      await res.arrayBuffer();
-    } catch (e) {
-      checkAbort();
-      throw new NetError('Сервер замера недоступен', 'Не удалось достучаться до speed.cloudflare.com. Проверьте подключение; его может блокировать VPN, корпоративная сеть или блокировщик рекламы.');
-    } finally { clearTimeout(timeout); state.run.controllers.delete(ctrl); }
-    const t1 = performance.now();
-    if (!res.ok) throw new NetError('Сервер замера ответил ошибкой', `Код ответа ${res.status}. Попробуйте ещё раз через минуту.`);
-    // Если браузер отдаёт точные тайминги (Resource Timing) — используем их, без накладных расходов JS
-    let rtt = t1 - t0;
-    const entry = performance.getEntriesByName(url).pop();
-    if (entry && entry.requestStart > 0 && entry.responseStart > entry.requestStart) rtt = entry.responseStart - entry.requestStart;
-    performance.clearResourceTimings();
-    if (i === 0) continue; // первый запрос включает DNS/TLS — отбрасываем
+    let rtt;
+    try { rtt = await pingOnce(provider); }
+    catch (e) { checkAbort(); throw e instanceof NetError ? e : new NetError('err.server'); }
+    if (i === 0) continue;
     rtts.push(rtt);
     onSample(median(rtts), i / PING_SAMPLES);
     await sleep(50);
   }
-  const ping = median(rtts);
   let jitter = 0;
   for (let i = 1; i < rtts.length; i++) jitter += Math.abs(rtts[i] - rtts[i - 1]);
-  jitter /= Math.max(1, rtts.length - 1);
-  return { ping, jitter };
+  return { ping: median(rtts), jitter: jitter / Math.max(1, rtts.length - 1) };
 }
 
-/** DOWNLOAD: несколько параллельных потоков читают тело ответа, считаем байты на лету. */
-async function measureDownload(durationMs, onTick) {
+/** НАГРУЖЕННЫЙ ПИНГ: параллельно с download/upload шлём пинги и берём медиану */
+function startLoadedPing(provider) {
+  const rtts = []; let stop = false;
+  const loop = (async () => {
+    await sleep(800); // даём каналу забиться
+    while (!stop && state.run && !state.run.aborted) {
+      try { const r = await pingOnce(provider, 4000); if (!stop) rtts.push(r); } catch (e) { /* под нагрузкой бывает */ }
+      await sleep(250);
+    }
+  })();
+  return {
+    current: () => (rtts.length ? median(rtts) : null),
+    stop: async () => { stop = true; await loop.catch(() => {}); return rtts.length ? median(rtts) : null; },
+  };
+}
+
+/** DOWNLOAD: параллельные потоки читают тело ответа, байты считаем на лету */
+async function measureDownload(provider, durationMs, onTick) {
   let bytes = 0, stop = false, got = false, errors = 0, failure = null;
   const start = performance.now();
   const samples = [{ t: 0, b: 0 }];
+  const loaded = startLoadedPing(provider);
 
   const worker = async () => {
     while (!stop) {
       const ctrl = new AbortController(); state.run.controllers.add(ctrl);
       try {
-        const res = await fetch(`${BASE}/__down?bytes=${DOWN_CHUNK}&_=${Math.random()}`, { cache: 'no-store', signal: ctrl.signal });
-        if (!res.ok) throw new NetError('Сервер замера ответил ошибкой', `Код ответа ${res.status} на этапе download.`);
+        const res = await fetch(provider.down(DOWN_CHUNK), { cache: 'no-store', signal: ctrl.signal });
+        if (!res.ok) throw new NetError('err.status', { code: res.status });
         const reader = res.body.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          bytes += value.byteLength; got = true;
-        }
+        for (;;) { const { done, value } = await reader.read(); if (done) break; bytes += value.byteLength; got = true; }
       } catch (e) {
         if (stop || state.run.aborted) return;
-        if (++errors > 6) { failure = e instanceof NetError ? e : new NetError('Download прервался', 'Соединение с сервером замера постоянно обрывается.'); return; }
+        if (++errors > 6) { failure = e instanceof NetError ? e : new NetError('err.server'); return; }
         await sleep(300);
-      } finally { state.run.controllers.delete(ctrl); }
+      } finally { state.run && state.run.controllers.delete(ctrl); }
     }
   };
   const workers = Array.from({ length: DOWN_STREAMS }, worker);
 
-  for (;;) {
-    await sleep(150);
-    if (state.run.aborted) { stop = true; abortAll(); throw new AbortedError(state.run.reason); }
-    const t = performance.now() - start;
-    samples.push({ t, b: bytes });
-    if (failure && !got) { stop = true; abortAll(); throw failure; }
-    onTick(windowSpeed(samples, 1200), Math.min(1, t / durationMs));
-    if (t >= durationMs) break;
+  try {
+    for (;;) {
+      await sleep(150);
+      if (state.run.aborted) throw new AbortedError(state.run.reason);
+      const tt = performance.now() - start;
+      samples.push({ t: tt, b: bytes });
+      if (failure && !got) throw failure;
+      onTick(windowSpeed(samples, 1200), Math.min(1, tt / durationMs), loaded.current(), tt);
+      if (tt >= durationMs) break;
+    }
+  } finally {
+    stop = true;
+    abortAll();                       // обрываем потоки и текущий пинг
+    samples.ld = await loaded.stop();
+    await Promise.allSettled(workers);
   }
-  stop = true; abortAll();
-  await Promise.allSettled(workers);
-  if (!got) throw new NetError('Не удалось скачать данные', 'Сервер не прислал ни одного байта. Возможно, соединение блокируется.');
-  return finalSpeed(samples, Math.min(durationMs * 0.3, 2500));
+  if (!got) throw new NetError('err.down');
+  return { speed: finalSpeed(samples, Math.min(durationMs * 0.3, 2500)), loaded: samples.ld };
 }
 
-/** UPLOAD: XHR с upload.onprogress, чтобы видеть отправленные байты в реальном времени. */
+/** UPLOAD: XHR + upload.onprogress, чтобы видеть отправленные байты живьём */
 let randomChunk = null;
 const blobCache = new Map();
 function makeBlob(size) {
   if (!randomChunk) {
-    // 1 МБ случайных данных (crypto отдаёт максимум 64 КБ за вызов)
     randomChunk = new Uint8Array(1 << 20);
     for (let i = 0; i < randomChunk.length; i += 65536) crypto.getRandomValues(randomChunk.subarray(i, i + 65536));
   }
   if (!blobCache.has(size)) blobCache.set(size, new Blob(Array(Math.ceil(size / randomChunk.length)).fill(randomChunk)));
   return blobCache.get(size);
 }
-async function measureUpload(durationMs, onTick) {
+async function measureUpload(provider, durationMs, onTick) {
   let sentDone = 0, stop = false, got = false, errors = 0, failure = null;
   const inflight = new Map();
   const total = () => { let s = sentDone; inflight.forEach((v) => { s += v; }); return s; };
   const start = performance.now();
   const samples = [{ t: 0, b: 0 }];
+  const loaded = startLoadedPing(provider);
 
   const send = (blob) => new Promise((resolve, reject) => {
     const x = new XMLHttpRequest();
     state.run.xhrs.add(x);
-    x.open('POST', `${BASE}/__up?_=${Math.random()}`);
+    x.open('POST', provider.up());
     x.upload.onprogress = (e) => { inflight.set(x, e.loaded); if (e.loaded > 0) got = true; };
     const cleanup = () => { state.run && state.run.xhrs.delete(x); inflight.delete(x); };
     x.onload = () => {
       cleanup();
-      if (x.status >= 200 && x.status < 300) { sentDone += blob.size; resolve(); }
-      else reject(new NetError('Сервер замера ответил ошибкой', `Код ответа ${x.status} на этапе upload.`));
+      if (x.status >= 200 && x.status < 300) { sentDone += blob.size; got = true; resolve(); }
+      else reject(new NetError('err.status', { code: x.status }));
     };
-    x.onerror = () => { cleanup(); reject(new NetError('Upload не прошёл', 'Не удалось отправить данные на сервер замера.')); };
+    x.onerror = () => { cleanup(); reject(new NetError('err.up')); };
     x.onabort = () => { cleanup(); resolve(); };
     x.send(blob);
   });
@@ -963,41 +1299,45 @@ async function measureUpload(durationMs, onTick) {
       catch (e) {
         if (stop || state.run.aborted) return;
         if (++errors > 6) { failure = e; return; }
+        size = Math.max(256 << 10, size >> 1); // сервер мог не принять большой кусок
         await sleep(300); continue;
       }
-      if (performance.now() - t0 < 1500 && size < (32 << 20)) size *= 2;
+      if (performance.now() - t0 < 1500 && size < provider.maxUp) size *= 2;
     }
   };
   const workers = Array.from({ length: UP_STREAMS }, worker);
 
-  for (;;) {
-    await sleep(150);
-    if (state.run.aborted) { stop = true; abortAll(); throw new AbortedError(state.run.reason); }
-    const t = performance.now() - start;
-    samples.push({ t, b: total() });
-    if (failure && !got) { stop = true; abortAll(); throw failure; }
-    onTick(windowSpeed(samples, 1200), Math.min(1, t / durationMs));
-    if (t >= durationMs) break;
+  let result = 0;
+  try {
+    for (;;) {
+      await sleep(150);
+      if (state.run.aborted) throw new AbortedError(state.run.reason);
+      const tt = performance.now() - start;
+      samples.push({ t: tt, b: total() });
+      if (failure && !got) throw failure;
+      onTick(windowSpeed(samples, 1200), Math.min(1, tt / durationMs), loaded.current(), tt);
+      if (tt >= durationMs) break;
+    }
+    result = finalSpeed(samples, Math.min(durationMs * 0.3, 2500)); // считаем ДО abort
+  } finally {
+    stop = true;
+    abortAll();
+    samples.lu = await loaded.stop();
+    await Promise.allSettled(workers);
   }
-  const result = finalSpeed(samples, Math.min(durationMs * 0.3, 2500)); // считаем ДО abort
-  stop = true; abortAll();
-  await Promise.allSettled(workers);
-  if (!got) throw new NetError('Не удалось отправить данные', 'Сервер не принял ни одного байта на этапе upload.');
-  return result;
+  if (!got) throw new NetError('err.up');
+  return { speed: result, loaded: samples.lu };
 }
 
-/* ---------- 5. ЗАПУСК ТЕСТА И UI ---------- */
+/* ---------- 6. ЗАПУСК ТЕСТА И UI ---------- */
 const PHASE_WEIGHT = { ping: [0, .12], down: [.12, .56], up: [.56, 1] };
+const ORDER = ['ping', 'down', 'up'];
 function setStage(name, frac) {
-  ['ping', 'down', 'up'].forEach((n) => {
+  ORDER.forEach((n) => {
     const el = $('#st-' + n), bar = el.querySelector('i');
-    const order = ['ping', 'down', 'up'];
-    const cur = order.indexOf(name), me = order.indexOf(n);
-    el.classList.toggle('active', me === cur);
-    el.classList.toggle('done', me < cur);
-    if (me < cur) bar.style.width = '100%';
-    else if (me > cur) bar.style.width = '0%';
-    else bar.style.width = (frac * 100).toFixed(1) + '%';
+    const cur = ORDER.indexOf(name), me = ORDER.indexOf(n);
+    el.classList.toggle('active', me === cur); el.classList.toggle('done', me < cur);
+    bar.style.width = me < cur ? '100%' : me > cur ? '0%' : (frac * 100).toFixed(1) + '%';
   });
   const [a, b] = PHASE_WEIGHT[name];
   $('#totalPct').textContent = Math.round((a + (b - a) * frac) * 100) + '%';
@@ -1006,23 +1346,44 @@ function resetStages() {
   $$('.stage').forEach((el) => { el.classList.remove('active', 'done'); el.querySelector('i').style.width = '0%'; });
   $('#totalPct').textContent = '0%';
 }
-function liveMetric(name) { $$('.metric').forEach((m) => m.classList.toggle('live', m.id === 'mt-' + name)); }
-function setPhaseLabel(text, up) { const p = $('#gaugePhase'); p.textContent = text; p.classList.toggle('up', !!up); }
+function liveMetric(name) { $$('.metric').forEach((m) => m.classList.toggle('live-on', m.id === 'mt-' + name)); }
+let phaseKey = 'phase.ready';
+function setPhase(key, up) { phaseKey = key; const p = $('#gaugePhase'); p.textContent = t(key); p.classList.toggle('up', !!up); }
 
-function showAlert(title, text, info) {
-  $('#alertTitle').textContent = title; $('#alertText').textContent = text;
-  $('#alert').classList.toggle('info', !!info);
-  $('#alert').classList.add('show');
+let alertState = null;
+function showAlert(titleKey, textKey, vars, info) {
+  alertState = { titleKey, textKey, vars, info };
+  $('#alertTitle').textContent = t(titleKey); $('#alertText').textContent = t(textKey, vars);
+  $('#alert').classList.toggle('info', !!info); $('#alert').classList.add('show');
 }
-const hideAlert = () => $('#alert').classList.remove('show');
+const hideAlert = () => { alertState = null; $('#alert').classList.remove('show'); };
 
 function setButton(running) {
   const b = $('#startBtn');
   b.classList.toggle('running', running);
-  b.querySelector('span').textContent = running ? 'Остановить' : (state.history.length ? 'Запустить снова' : 'Начать тест');
+  b.querySelector('span').textContent = running ? t('btn.stop') : (state.history.length ? t('btn.again') : t('btn.start'));
   b.querySelector('svg').innerHTML = running ? '<rect x="6" y="6" width="12" height="12" rx="2.5"/>' : '<path d="M7 4.5v15l13-7.5z"/>';
-  // во время теста нельзя менять длительность
-  $$('[data-setting="duration"] button').forEach((x) => { x.disabled = running; });
+  $$('[data-setting="duration"] button, [data-setting="server"] button').forEach((x) => { x.disabled = running; });
+}
+
+// Плашка с узлом в шапке
+let metaInfo = null;
+function renderServerChip() {
+  const p = state.provider;
+  if (!navigator.onLine) { $('#serverText').innerHTML = `<b>${t('server.offline')}</b>`; $('#serverDot').className = 'dot bad'; return; }
+  if (p && p.id === 'ls') { $('#serverText').innerHTML = `${t('server.node')} <b>${esc(p.label)}</b>`; $('#serverDot').className = 'dot ok'; return; }
+  if (metaInfo) {
+    const colo = metaInfo.colo && typeof metaInfo.colo === 'object' ? metaInfo.colo : { iata: metaInfo.colo };
+    const where = colo.city ? `${colo.city}${colo.iata ? ' (' + colo.iata + ')' : ''}` : (colo.iata || 'Cloudflare');
+    $('#serverText').innerHTML = `${t('server.node')} <b>Cloudflare · ${esc(where)}</b>${metaInfo.asOrganization ? ' · ' + esc(metaInfo.asOrganization) : ''}`;
+    $('#serverDot').className = 'dot ok';
+  } else {
+    $('#serverText').innerHTML = `${t('server.node')}: <b>Cloudflare</b>`; $('#serverDot').className = 'dot';
+  }
+}
+async function loadMeta() {
+  try { const r = await fetch(CF_BASE + '/meta', { cache: 'no-store' }); if (!r.ok) throw 0; metaInfo = await r.json(); } catch (e) { metaInfo = null; }
+  renderServerChip();
 }
 
 function abortTest(reason) {
@@ -1031,64 +1392,98 @@ function abortTest(reason) {
   abortAll();
 }
 
+function resetLoadedUI() { $('#v-ld').textContent = '—'; $('#v-lu').textContent = '—'; const g = $('#bbGrade'); g.textContent = '—'; g.className = 'bb-grade'; }
+
+// Один полный прогон на выбранном сервере
+async function runOn(provider, dur) {
+  state.provider = provider; renderServerChip();
+  state.live = { down: [], up: [] }; drawLive();
+  // 1. Пинг
+  gauge.mode = 'ping'; setGauge(0);
+  setStage('ping', 0); liveMetric('ping'); setPhase('phase.ping');
+  $('#gaugeUnit').textContent = t('unit.ms'); $('#gaugeValue').textContent = '…';
+  const { ping, jitter } = await measurePing(provider, (p, f) => {
+    $('#gaugeValue').textContent = fmtMs(p); $('#v-ping').textContent = fmtMs(p); setStage('ping', f);
+  });
+  $('#v-ping').textContent = fmtMs(ping); $('#v-jitter').textContent = fmtMs(jitter);
+  feedback('phase');
+  // 2. Download
+  gauge.mode = 'down'; gauge.shown = 0;
+  setStage('down', 0); liveMetric('down'); setPhase('phase.down'); $('#gaugeUnit').textContent = unitLabel();
+  const d = await measureDownload(provider, dur, (s, f, ld, tt) => {
+    setGauge(s); $('#v-down').textContent = fmtSpeed(s); setStage('down', f);
+    if (ld != null) $('#v-ld').textContent = fmtMs(ld);
+    state.live.down.push({ t: tt, v: s }); drawLive();
+  });
+  $('#v-down').textContent = fmtSpeed(d.speed); $('#v-ld').textContent = fmtMs(d.loaded);
+  setGauge(0); await sleep(450); checkAbort();
+  feedback('phase');
+  // 3. Upload
+  gauge.mode = 'up';
+  setStage('up', 0); liveMetric('up'); setPhase('phase.up', true);
+  const u = await measureUpload(provider, dur, (s, f, lu, tt) => {
+    setGauge(s); $('#v-up').textContent = fmtSpeed(s); setStage('up', f);
+    if (lu != null) $('#v-lu').textContent = fmtMs(lu);
+    state.live.up.push({ t: tt, v: s }); drawLive();
+  });
+  $('#v-up').textContent = fmtSpeed(u.speed); $('#v-lu').textContent = fmtMs(u.loaded);
+  setStage('up', 1); $$('.stage').forEach((el) => el.classList.add('done'));
+  return { date: new Date(), ping, jitter, down: d.speed, up: u.speed, ld: d.loaded, lu: u.loaded, srv: provider.label };
+}
+
 async function startTest() {
-  if (state.run) { abortTest('Тест прерван'); return; }
+  ensureAudio();
+  if (state.run) { abortTest('user'); return; }
   hideAlert();
-  if (!navigator.onLine) { showAlert('Нет сети', 'Браузер сообщает, что подключения к интернету нет. Проверьте Wi-Fi или кабель и попробуйте снова.'); return; }
+  if (!navigator.onLine) { showAlert('err.offline', 'err.offlineT'); feedback('error'); return; }
 
   state.run = { aborted: false, reason: '', controllers: new Set(), xhrs: new Set() };
   $('#result').classList.remove('show');
   ['ping', 'jitter', 'down', 'up'].forEach((k) => { $('#v-' + k).textContent = '—'; });
-  resetStages(); setButton(true);
+  resetLoadedUI(); resetStages(); setButton(true);
   const dur = state.settings.duration * 1000;
 
   try {
-    // ── 1. Пинг
-    gauge.mode = 'ping'; setGauge(0);
-    setStage('ping', 0); liveMetric('ping'); setPhaseLabel('пинг');
-    $('#gaugeUnit').textContent = 'мс'; $('#gaugeValue').textContent = '…';
-    const { ping, jitter } = await measurePing((p, f) => {
-      $('#gaugeValue').textContent = fmtMs(p); $('#v-ping').textContent = fmtMs(p); setStage('ping', f);
-    });
-    $('#v-ping').textContent = fmtMs(ping); $('#v-jitter').textContent = fmtMs(jitter);
-
-    // ── 2. Download
-    gauge.mode = 'down'; gauge.shown = 0;
-    setStage('down', 0); liveMetric('down'); setPhaseLabel('download'); $('#gaugeUnit').textContent = unitLabel();
-    const down = await measureDownload(dur, (s, f) => { setGauge(s); $('#v-down').textContent = fmtSpeed(s); setStage('down', f); });
-    $('#v-down').textContent = fmtSpeed(down);
-    setGauge(0); await sleep(450); checkAbort();
-
-    // ── 3. Upload
-    gauge.mode = 'up';
-    setStage('up', 0); liveMetric('up'); setPhaseLabel('upload', true);
-    const up = await measureUpload(dur, (s, f) => { setGauge(s); $('#v-up').textContent = fmtSpeed(s); setStage('up', f); });
-    $('#v-up').textContent = fmtSpeed(up);
-    setStage('up', 1); $$('.stage').forEach((el) => el.classList.add('done'));
-
-    // ── Итог
-    const rec = { date: new Date(), ping, jitter, down, up };
-    state.history.push(rec);
-    saveHistory();
-    gauge.mode = 'idle-speed'; setGauge(down);
-    setPhaseLabel('download · итог');
+    gauge.mode = 'ping'; setPhase('phase.select'); $('#gaugeValue').textContent = '…'; $('#gaugeUnit').textContent = '';
+    $('#serverText').textContent = t('server.picking');
+    let provider = await selectProvider();
+    checkAbort();
+    let rec;
+    try { rec = await runOn(provider, dur); }
+    catch (e) {
+      // Авто-режим: Cloudflare отвалился посреди теста → один повтор на запасном сервере
+      if (e instanceof NetError && state.settings.server === 'auto' && provider.id === 'cf' && !state.run.aborted) {
+        toast(t('toast.switch'));
+        const alt = await pickLibreSpeed();
+        if (!alt) throw new NetError('err.noServer');
+        resetStages(); resetLoadedUI();
+        rec = await runOn(alt, dur);
+      } else throw e;
+    }
+    state.history.push(rec); saveHistory();
+    state.last = rec;
+    gauge.mode = 'idle-speed'; setGauge(rec.down);
+    setPhase('phase.result');
     renderResult(rec);
     renderHistory(); renderStats();
+    feedback('done');
+    countHit('tests');
   } catch (e) {
     gauge.mode = 'idle'; setGauge(0);
     $('#gaugeValue').textContent = '0'; $('#gaugeUnit').textContent = unitLabel();
     resetStages();
     if (e instanceof AbortedError) {
-      if (/сет/i.test(e.message)) { setPhaseLabel('нет сети'); showAlert('Нет сети', 'Подключение пропало во время замера. Как только интернет вернётся, запустите тест заново.'); }
-      else { setPhaseLabel('тест прерван'); showAlert('Тест прерван', 'Замер остановлен, результат не сохранён.', true); }
+      if (e.message === 'offline') { setPhase('phase.offline'); showAlert('err.lost', 'err.lostT'); feedback('error'); }
+      else { setPhase('phase.aborted'); showAlert('err.aborted', 'err.abortedT', null, true); }
     } else if (!navigator.onLine) {
-      setPhaseLabel('нет сети'); showAlert('Нет сети', 'Подключение к интернету пропало. Проверьте сеть и попробуйте снова.');
+      setPhase('phase.offline'); showAlert('err.lost', 'err.lostT'); feedback('error');
     } else if (e instanceof NetError) {
-      setPhaseLabel('ошибка'); showAlert(e.message, e.text || '');
+      setPhase('phase.error'); showAlert(e.key, e.key + 'T', e.vars); feedback('error');
     } else {
       console.error(e);
-      setPhaseLabel('ошибка'); showAlert('Что-то пошло не так', 'Непредвиденная ошибка при замере: ' + (e && e.message ? e.message : e));
+      setPhase('phase.error'); showAlert('err.unknown', 'err.unknownT', { msg: e && e.message ? e.message : String(e) }); feedback('error');
     }
+    renderServerChip();
   } finally {
     abortAll();
     state.run = null;
@@ -1096,66 +1491,177 @@ async function startTest() {
   }
 }
 $('#startBtn').addEventListener('click', startTest);
-window.addEventListener('offline', () => abortTest('Пропало подключение к сети'));
-// Если пользователь ушёл со вкладки браузера надолго — замер всё равно идёт; при закрытии всё отменится само.
 
-/* ---------- 6. ОЦЕНКА РЕЗУЛЬТАТА ---------- */
+/* ---------- 7. ЗВУК, ВИБРАЦИЯ, «ПОДЕЛИТЬСЯ» ---------- */
+let actx = null;
+function ensureAudio() {
+  if (state.settings.sound !== 'on') return;
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (e) { actx = null; }
+}
+function tone(freq, t0, dur, vol = 0.12, type = 'sine') {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.value = freq;
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0 + dur + 0.05);
+}
+function feedback(kind) {
+  if (state.settings.sound !== 'on') return;
+  try {
+    if (actx) {
+      const t0 = actx.currentTime;
+      if (kind === 'done') { tone(659.25, t0, .5); tone(987.77, t0 + .12, .7); tone(1318.5, t0 + .24, .9, .07); }
+      else if (kind === 'phase') { tone(880, t0, .18, .04); }
+      else if (kind === 'error') { tone(330, t0, .3, .09, 'triangle'); tone(247, t0 + .15, .45, .09, 'triangle'); }
+    }
+    if (navigator.vibrate) navigator.vibrate(kind === 'done' ? [40, 60, 40] : kind === 'error' ? [180] : 12);
+  } catch (e) {}
+}
+
+// Картинка-карточка результата 1080×1350 (формат для сторис и чатов)
+if (window.CanvasRenderingContext2D && !CanvasRenderingContext2D.prototype.roundRect) {
+  // запасной вариант для старых браузеров
+  CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+    this.moveTo(x + r, y); this.arcTo(x + w, y, x + w, y + h, r); this.arcTo(x + w, y + h, x, y + h, r);
+    this.arcTo(x, y + h, x, y, r); this.arcTo(x, y, x + w, y, r); this.closePath(); return this;
+  };
+}
+function loadImage(src) { return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = src; }); }
+async function makeCardBlob(r) {
+  try { await document.fonts.ready; } catch (e) {}
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const c = cv.getContext('2d');
+  // фон с пятнами палитры
+  c.fillStyle = C.bg; c.fillRect(0, 0, W, H);
+  const blob = (x, y, rad, color, a) => { const g = c.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, color + a); g.addColorStop(1, color + '00'); c.fillStyle = g; c.fillRect(0, 0, W, H); };
+  blob(120, 80, 720, C.apricot, '55'); blob(1000, 1300, 760, C.lavender, '4d'); blob(600, 700, 500, C.bg2, 'cc');
+  // карточка-стекло
+  c.fillStyle = 'rgba(14,46,39,.55)'; c.strokeStyle = 'rgba(242,230,207,.14)'; c.lineWidth = 2;
+  c.beginPath(); c.roundRect(60, 230, W - 120, 900, 48); c.fill(); c.stroke();
+  // логотип и название
+  try { const logo = await loadImage(window.ZEPHYR_LOGO_URI); c.drawImage(logo, 80, 80, 104, 104); } catch (e) {}
+  const num = '"Space Grotesk", "JetBrains Mono", monospace', ui = 'Inter, system-ui, sans-serif';
+  c.fillStyle = C.champagne; c.font = `700 60px ${num}`; if ('letterSpacing' in c) c.letterSpacing = '12px';
+  c.fillText('ZEPHYR', 214, 140); if ('letterSpacing' in c) c.letterSpacing = '0px';
+  c.fillStyle = C.muted; c.font = `400 30px ${ui}`; c.fillText(t('slogan'), 216, 180);
+  // download
+  const unit = unitLabel();
+  c.fillStyle = C.muted; c.font = `600 28px ${ui}`; if ('letterSpacing' in c) c.letterSpacing = '5px';
+  c.fillText(t('card.download'), 120, 330); if ('letterSpacing' in c) c.letterSpacing = '0px';
+  c.fillStyle = C.apricot; c.font = `600 200px ${num}`;
+  const dTxt = fmtSpeed(r.down); c.fillText(dTxt, 112, 520);
+  const dw = c.measureText(dTxt).width; c.fillStyle = C.muted; c.font = `400 40px ${ui}`; c.fillText(unit, 112 + dw + 20, 520);
+  // upload
+  c.fillStyle = C.muted; c.font = `600 28px ${ui}`; if ('letterSpacing' in c) c.letterSpacing = '5px';
+  c.fillText(t('card.upload'), 120, 620); if ('letterSpacing' in c) c.letterSpacing = '0px';
+  c.fillStyle = C.lavender; c.font = `600 120px ${num}`;
+  const uTxt = fmtSpeed(r.up); c.fillText(uTxt, 114, 745);
+  const uw = c.measureText(uTxt).width; c.fillStyle = C.muted; c.font = `400 34px ${ui}`; c.fillText(unit, 114 + uw + 16, 745);
+  // линия и мелкие показатели
+  c.strokeStyle = 'rgba(242,230,207,.16)'; c.beginPath(); c.moveTo(120, 820); c.lineTo(W - 120, 820); c.stroke();
+  const ms = t('unit.ms');
+  const loadedMax = r.ld != null || r.lu != null ? Math.max(r.ld || 0, r.lu || 0) : null;
+  [[t('card.ping'), fmtMs(r.ping)], [t('card.jitter'), fmtMs(r.jitter)], [t('card.loaded'), fmtMs(loadedMax)]].forEach(([lab, val], i) => {
+    const x = 120 + i * 290;
+    c.fillStyle = C.muted; c.font = `600 22px ${ui}`; if ('letterSpacing' in c) c.letterSpacing = '4px'; c.fillText(lab, x, 880); if ('letterSpacing' in c) c.letterSpacing = '0px';
+    c.fillStyle = C.champagne; c.font = `600 64px ${num}`; c.fillText(val, x, 960);
+    const vw = c.measureText(val).width; c.fillStyle = C.muted; c.font = `400 26px ${ui}`; c.fillText(ms, x + vw + 10, 960);
+  });
+  // оценка
+  const ev = evaluate(r);
+  const gtxt = `${t('card.grade')}: ${ev.grade[0]} · ${ev.score}/100`;
+  c.font = `600 34px ${ui}`; const gw = c.measureText(gtxt).width + 64;
+  const gg = c.createLinearGradient(120, 0, 120 + gw, 0); gg.addColorStop(0, C.apricot); gg.addColorStop(1, C.lavender);
+  c.fillStyle = gg; c.beginPath(); c.roundRect(120, 1020, gw, 72, 36); c.fill();
+  c.fillStyle = C.bg; c.fillText(gtxt, 152, 1068);
+  // подвал
+  c.fillStyle = C.muted; c.font = `400 28px ${ui}`;
+  c.fillText(r.date.toLocaleString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }), 80, 1250);
+  c.fillStyle = C.champagne; c.font = `600 30px ${ui}`; c.textAlign = 'right'; c.fillText(SITE_URL.replace('https://', ''), W - 80, 1250); c.textAlign = 'left';
+  return new Promise((res) => cv.toBlob(res, 'image/png'));
+}
+const shareText = (r) => t('share.text', { down: `${fmtSpeed(r.down)} ${unitLabel()}`, up: `${fmtSpeed(r.up)} ${unitLabel()}`, ping: fmtMs(r.ping) });
+function downloadBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+async function copyText(s) { try { await navigator.clipboard.writeText(s); return true; } catch (e) { return false; } }
+async function shareResult() {
+  const r = state.last; if (!r) return;
+  const text = shareText(r);
+  try {
+    const blob = await makeCardBlob(r);
+    const file = new File([blob], 'zephyr-result.png', { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: 'ZEPHYR', text: `${text}\n${SITE_URL}` }); return; }
+    if (navigator.share) { await navigator.share({ title: 'ZEPHYR', text, url: SITE_URL }); return; }
+    downloadBlob(blob, 'zephyr-result.png');
+    toast((await copyText(`${text}\n${SITE_URL}`)) ? t('toast.savedCopied') : t('toast.saved'));
+  } catch (e) {
+    if (e && e.name === 'AbortError') return; // пользователь закрыл окно «поделиться»
+    if (await copyText(`${text}\n${SITE_URL}`)) toast(t('toast.copied'));
+  }
+}
+async function saveResultImage() {
+  const r = state.last; if (!r) return;
+  downloadBlob(await makeCardBlob(r), `zephyr-${r.date.toISOString().slice(0, 16).replace(/[:T]/g, '-')}.png`);
+  toast(t('toast.saved'));
+}
+$('#shareBtn').addEventListener('click', shareResult);
+$('#saveBtn').addEventListener('click', saveResultImage);
+
+/* ---------- 8. ОЦЕНКА РЕЗУЛЬТАТА ---------- */
 const ICONS = {
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 12h12"/></svg>',
   bad: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
 };
+// Bufferbloat: насколько вырос пинг под нагрузкой
+function bufferbloat(r) {
+  if (r.ld == null && r.lu == null) return null;
+  const inc = Math.max(0, Math.max(r.ld || 0, r.lu || 0) - r.ping);
+  const grade = inc <= 5 ? 'A+' : inc <= 30 ? 'A' : inc <= 60 ? 'B' : inc <= 200 ? 'C' : inc <= 400 ? 'D' : 'F';
+  const cls = inc <= 30 ? 'g-good' : inc <= 200 ? 'g-mid' : 'g-bad';
+  return { inc, grade, cls };
+}
 function evaluate(r) {
-  // Баллы 0–100: download 45, upload 25, пинг 20, джиттер 10
   let score = Math.min(r.down / 100, 1) * 45 + Math.min(r.up / 30, 1) * 25;
   score += r.ping <= 20 ? 20 : r.ping <= 50 ? 15 : r.ping <= 100 ? 8 : 3;
   score += r.jitter <= 5 ? 10 : r.jitter <= 15 ? 7 : r.jitter <= 30 ? 4 : 1;
-  score = Math.round(score);
-  const grade = score >= 85 ? ['Отлично', 'Сеть летает: можно всё и сразу, хоть на нескольких устройствах.']
-    : score >= 65 ? ['Хорошо', 'Уверенный канал для дома: видео, игры и звонки без сюрпризов.']
-    : score >= 40 ? ['Средне', 'Для повседневных задач хватит, на тяжёлых сценариях может проседать.']
-    : ['Слабо', 'Канал узковат: базовый веб ок, а видео и звонки будут капризничать.'];
-
+  const bb0 = bufferbloat(r);
+  if (bb0) score -= bb0.inc > 200 ? 10 : bb0.inc > 60 ? 5 : 0; // сильный bufferbloat снижает балл
+  score = Math.max(0, Math.round(score));
+  const gi = score >= 85 ? 0 : score >= 65 ? 1 : score >= 40 ? 2 : 3;
+  const grade = [t('grade.' + gi), t('grade.' + gi + 't')];
   const v = [];
-  if (r.down >= 25) v.push(['ok', 'Хватит для 4K', 'Стриминг в 4K/HDR без буферизации']);
-  else if (r.down >= 10) v.push(['ok', 'Full HD без проблем', 'Для 4K скорости маловато']);
-  else if (r.down >= 5) v.push(['warn', 'HD-видео потянет', '1080p может подтормаживать']);
-  else v.push(['bad', 'Видео только в низком качестве', 'Для HD нужно от 5 Мбит/с']);
-
-  if (r.ping <= 40 && r.jitter <= 15) v.push(['ok', 'Подходит для онлайн-игр', `Пинг ${fmtMs(r.ping)} мс, стабильно`]);
-  else if (r.ping <= 80 && r.jitter <= 30) v.push(['warn', 'Игры: терпимо', 'Для соревновательных игр задержка великовата']);
-  else v.push(['bad', 'Для онлайн-игр не лучший вариант', 'Высокий или нестабильный пинг']);
-
-  if (r.up >= 3 && r.down >= 3 && r.ping <= 100) v.push(['ok', 'Видеозвонки в HD', 'Zoom, Meet, Телемост: всё ок']);
-  else if (r.up >= 1) v.push(['warn', 'Звонки потянет', 'Видео может снижать качество']);
-  else v.push(['bad', 'Видеозвонки будут тормозить', 'Upload ниже 1 Мбит/с']);
-
-  if (r.up >= 10) v.push(['ok', 'Можно вести стримы 1080p', 'И быстро выгружать файлы в облако']);
-  else if (r.up >= 4) v.push(['warn', 'Стрим в 720p', 'Для 1080p60 нужно от 8–10 Мбит/с']);
-  else v.push(['bad', 'Для своих стримов слабовато', 'Upload ниже 4 Мбит/с']);
-
-  return { score, grade, verdicts: v };
+  const add = (cls, k, vars) => v.push([cls, t(k, vars), t(k + 's', vars)]);
+  if (r.down >= 25) add('ok', 'v.4k'); else if (r.down >= 10) add('ok', 'v.fhd'); else if (r.down >= 5) add('warn', 'v.hd'); else add('bad', 'v.sd');
+  if (r.ping <= 40 && r.jitter <= 15) add('ok', 'v.game', { ping: fmtMs(r.ping) });
+  else if (r.ping <= 80 && r.jitter <= 30) add('warn', 'v.gamem'); else add('bad', 'v.gameb');
+  if (r.up >= 3 && r.down >= 3 && r.ping <= 100) add('ok', 'v.call'); else if (r.up >= 1) add('warn', 'v.callm'); else add('bad', 'v.callb');
+  if (r.up >= 10) add('ok', 'v.stream'); else if (r.up >= 4) add('warn', 'v.streamm'); else add('bad', 'v.streamb');
+  const bb = bufferbloat(r);
+  if (bb) { const inc = fmtMs(bb.inc); if (bb.inc <= 30) add('ok', 'v.bb', { inc }); else if (bb.inc <= 200) add('warn', 'v.bbm', { inc }); else add('bad', 'v.bbb', { inc }); }
+  return { score, grade, verdicts: v, bb };
 }
-function renderResult(r) {
+function renderResult(r, animate = true) {
   const ev = evaluate(r);
   $('#gradeTitle').textContent = ev.grade[0];
   $('#gradeText').textContent = ev.grade[1];
   $('#gradeScore').textContent = ev.score;
-  $('#verdicts').innerHTML = ev.verdicts.map(([cls, t, s]) =>
-    `<div class="verdict ${cls}"><span class="ic">${ICONS[cls]}</span><div>${t}<small>${s}</small></div></div>`).join('');
+  $('#verdicts').innerHTML = ev.verdicts.map(([cls, tt, s]) =>
+    `<div class="verdict ${cls}"><span class="ic">${ICONS[cls]}</span><div>${esc(tt)}<small>${esc(s)}</small></div></div>`).join('');
+  if (ev.bb) { const g = $('#bbGrade'); g.textContent = ev.bb.grade; g.className = 'bb-grade ' + ev.bb.cls; }
   const arc = $('#gradeArc');
-  arc.style.strokeDashoffset = 213.6;
   $('#result').classList.add('show');
-  requestAnimationFrame(() => requestAnimationFrame(() => { arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100); }));
+  if (animate) { arc.style.strokeDashoffset = 213.6; requestAnimationFrame(() => requestAnimationFrame(() => { arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100); })); }
+  else arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100);
 }
 
-/* ---------- 7. ИСТОРИЯ, СТАТИСТИКА, ГРАФИКИ ---------- */
+/* ---------- 9. ИСТОРИЯ, СТАТИСТИКА, ГРАФИКИ ---------- */
 const charts = {};
 const hasChart = () => typeof window.Chart !== 'undefined';
-const fmtDate = (d) => d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-const fmtTime = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-const EMPTY = (title, text) => `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><b>${title}</b>${text}</div>`;
-
+const fmtDate = (d) => d.toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const fmtTime = (d) => d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' });
+const EMPTY = (k) => `<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4.5 17a8.5 8.5 0 1 1 15 0"/><path d="M12 13l4-5"/></svg><b>${t(k)}</b>${t(k + 'T')}</div>`;
 function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
 function chartBase() {
   const muted = cssVar('--muted'), line = cssVar('--line');
@@ -1166,7 +1672,7 @@ function chartBase() {
     plugins: {
       legend: { display: false },
       tooltip: {
-        backgroundColor: cssVar('--glass-strong') || '#0E2E27', titleColor: cssVar('--text'), bodyColor: cssVar('--text'),
+        backgroundColor: cssVar('--glass-strong') || C.bg2, titleColor: cssVar('--text'), bodyColor: cssVar('--text'),
         borderColor: line, borderWidth: 1, padding: 12, cornerRadius: 12, boxPadding: 4,
         titleFont: { family: 'Inter', weight: '600' }, bodyFont: { family: 'Space Grotesk' },
         callbacks: { label: (c) => ` ${c.dataset.label}: ${fmtNum(c.parsed.y)} ${unitLabel()}` },
@@ -1178,37 +1684,35 @@ function chartBase() {
     },
   };
 }
-function areaGradient(ctx, color) {
-  const g = ctx.createLinearGradient(0, 0, 0, 280);
-  g.addColorStop(0, color + '55'); g.addColorStop(1, color + '00');
-  return g;
-}
-function mountChart(key, boxId, canvasId, config) {
+function areaGradient(ctx, color) { const g = ctx.createLinearGradient(0, 0, 0, 280); g.addColorStop(0, color + '55'); g.addColorStop(1, color + '00'); return g; }
+function mountChart(key, boxId, config) {
   const box = $('#' + boxId);
-  if (!hasChart()) { box.innerHTML = EMPTY('Графики недоступны', 'Не загрузилась библиотека Chart.js (нужен интернет).'); return; }
   if (charts[key]) { charts[key].destroy(); charts[key] = null; }
-  if (!state.history.length) { box.innerHTML = EMPTY('Пока пусто', 'Запустите первый тест, и здесь появится график.'); return; }
-  box.innerHTML = `<canvas id="${canvasId}"></canvas>`;
-  charts[key] = new Chart($('#' + canvasId).getContext('2d'), config());
+  if (!hasChart()) { box.innerHTML = EMPTY('empty.nochart'); return; }
+  if (!state.history.length) { box.innerHTML = EMPTY('empty.c'); return; }
+  box.innerHTML = '<canvas></canvas>';
+  const ctx = box.querySelector('canvas').getContext('2d');
+  charts[key] = new Chart(ctx, config(ctx));
 }
-
 function renderHistory() {
-  const h = state.history;
-  // таблица (свежие сверху)
-  $('#historyTable').innerHTML = !h.length ? EMPTY('Замеров ещё не было', 'Результаты каждого теста будут появляться здесь.') :
-    `<div class="table-wrap"><table><thead><tr><th>Дата</th><th>Пинг</th><th>Джиттер</th><th>Download</th><th>Upload</th><th></th></tr></thead><tbody>` +
-    h.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => `<tr>
+  const h = state.history, u = unitLabel(), ms = t('unit.ms');
+  $('#historyTable').innerHTML = !h.length ? EMPTY('empty.h') :
+    `<div class="table-wrap"><table><thead><tr><th>${t('th.date')}</th><th>${t('th.ping')}</th><th>${t('th.jitter')}</th><th>${t('th.loaded')}</th><th>Download</th><th>Upload</th><th>${t('th.server')}</th><th></th></tr></thead><tbody>` +
+    h.map((r, i) => ({ r, i })).reverse().map(({ r, i }) => {
+      const lm = r.ld != null || r.lu != null ? Math.max(r.ld || 0, r.lu || 0) : null;
+      return `<tr>
       <td class="c-date">${fmtDate(r.date)}</td>
-      <td>${fmtMs(r.ping)} <span style="color:var(--muted)">мс</span></td>
-      <td>${fmtMs(r.jitter)} <span style="color:var(--muted)">мс</span></td>
-      <td class="c-down">${fmtSpeed(r.down)} <span style="color:var(--muted);font-weight:400">${unitLabel()}</span></td>
-      <td class="c-up">${fmtSpeed(r.up)} <span style="color:var(--muted);font-weight:400">${unitLabel()}</span></td>
-      <td>${i === h.length - 1 ? '<span class="badge">последний</span>' : ''}</td></tr>`).join('') +
-    `</tbody></table></div>`;
+      <td>${fmtMs(r.ping)} <span class="u">${ms}</span></td>
+      <td>${fmtMs(r.jitter)} <span class="u">${ms}</span></td>
+      <td>${fmtMs(lm)} ${lm != null ? `<span class="u">${ms}</span>` : ''}</td>
+      <td class="c-down">${fmtSpeed(r.down)} <span class="u">${u}</span></td>
+      <td class="c-up">${fmtSpeed(r.up)} <span class="u">${u}</span></td>
+      <td class="c-srv">${esc(r.srv || '—')}</td>
+      <td>${i === h.length - 1 ? `<span class="badge">${t('badge.last')}</span>` : ''}</td></tr>`;
+    }).join('') + `</tbody></table></div>`;
   $('#clearBtn').style.display = h.length ? '' : 'none';
-
-  mountChart('history', 'historyChartBox', 'historyChart', () => {
-    const ctx = document.getElementById('historyChart').getContext('2d');
+  if (!$('#tab-history').classList.contains('active')) return; // график рисуем только на видимой вкладке
+  mountChart('history', 'historyChartBox', (ctx) => {
     const ds = (label, key, color) => ({
       label, data: h.map((r) => toUnit(r[key])), borderColor: color, backgroundColor: areaGradient(ctx, color),
       fill: true, tension: .38, borderWidth: 2.5, pointRadius: 4, pointHoverRadius: 6,
@@ -1217,31 +1721,24 @@ function renderHistory() {
     return { type: 'line', data: { labels: h.map((r) => fmtTime(r.date)), datasets: [ds('Download', 'down', C.apricot), ds('Upload', 'up', C.lavender)] }, options: chartBase() };
   });
 }
-
 function renderStats() {
-  const h = state.history;
-  const grid = $('#statGrid');
-  if (!h.length) {
-    grid.innerHTML = `<div class="card" style="grid-column:1/-1">${EMPTY('Статистики пока нет', 'Нужен хотя бы один замер.')}</div>`;
-  } else {
+  const h = state.history, grid = $('#statGrid');
+  if (!h.length) grid.innerHTML = `<div class="card" style="grid-column:1/-1">${EMPTY('empty.s')}</div>`;
+  else {
     const agg = (k) => { const a = h.map((r) => r[k]); return { avg: a.reduce((s, x) => s + x, 0) / a.length, max: Math.max(...a), min: Math.min(...a) }; };
-    const d = agg('down'), u = agg('up'), p = agg('ping'), j = agg('jitter');
-    const u_ = unitLabel();
-    grid.innerHTML = `
-      <div class="card stat s-down"><div class="metric-label m-down"><i style="background:var(--apricot)"></i>Download · среднее</div>
-        <div class="stat-main">${fmtSpeed(d.avg)}<small>${u_}</small></div>
-        <div class="stat-sub"><div>Лучший<b>${fmtSpeed(d.max)}</b></div><div style="text-align:right">Худший<b>${fmtSpeed(d.min)}</b></div></div></div>
-      <div class="card stat s-up"><div class="metric-label"><i style="background:var(--lavender)"></i>Upload · среднее</div>
-        <div class="stat-main">${fmtSpeed(u.avg)}<small>${u_}</small></div>
-        <div class="stat-sub"><div>Лучший<b>${fmtSpeed(u.max)}</b></div><div style="text-align:right">Худший<b>${fmtSpeed(u.min)}</b></div></div></div>
-      <div class="card stat"><div class="metric-label"><i></i>Пинг · среднее</div>
-        <div class="stat-main">${fmtMs(p.avg)}<small>мс</small></div>
-        <div class="stat-sub"><div>Лучший<b>${fmtMs(p.min)}</b></div><div style="text-align:right">Худший<b>${fmtMs(p.max)}</b></div></div></div>
-      <div class="card stat"><div class="metric-label"><i></i>Джиттер · среднее</div>
-        <div class="stat-main">${fmtMs(j.avg)}<small>мс</small></div>
-        <div class="stat-sub"><div>Замеров<b>${h.length}</b></div><div style="text-align:right">Лучший<b>${fmtMs(j.min)}</b></div></div></div>`;
+    const d = agg('down'), up = agg('up'), p = agg('ping'), j = agg('jitter'), u = unitLabel(), ms = t('unit.ms');
+    const card = (cls, color, label, main, unit, l1, v1, l2, v2) => `
+      <div class="card stat ${cls}"><div class="metric-label"><i style="background:${color}"></i>${label} · ${t('stats.avg')}</div>
+        <div class="stat-main">${main}<small>${unit}</small></div>
+        <div class="stat-sub"><div>${l1}<b>${v1}</b></div><div style="text-align:right">${l2}<b>${v2}</b></div></div></div>`;
+    grid.innerHTML =
+      card('s-down', 'var(--apricot)', 'Download', fmtSpeed(d.avg), u, t('stats.best'), fmtSpeed(d.max), t('stats.worst'), fmtSpeed(d.min)) +
+      card('s-up', 'var(--lavender)', 'Upload', fmtSpeed(up.avg), u, t('stats.best'), fmtSpeed(up.max), t('stats.worst'), fmtSpeed(up.min)) +
+      card('', 'var(--champagne)', t('m.ping'), fmtMs(p.avg), ms, t('stats.best'), fmtMs(p.min), t('stats.worst'), fmtMs(p.max)) +
+      card('', 'var(--champagne)', t('m.jitter'), fmtMs(j.avg), ms, t('stats.count'), h.length, t('stats.best'), fmtMs(j.min));
   }
-  mountChart('stats', 'statsChartBox', 'statsChart', () => ({
+  if (!$('#tab-stats').classList.contains('active')) return;
+  mountChart('stats', 'statsChartBox', () => ({
     type: 'bar',
     data: {
       labels: h.map((r, i) => `#${i + 1} · ${fmtTime(r.date)}`),
@@ -1253,35 +1750,64 @@ function renderStats() {
     options: chartBase(),
   }));
 }
-
-// Очистка истории: двойной клик-подтверждение без системных диалогов
 let clearArmed = null;
 $('#clearBtn').addEventListener('click', (e) => {
   const b = e.currentTarget;
   if (!clearArmed) {
-    b.textContent = 'Точно очистить?'; b.classList.add('danger');
-    clearArmed = setTimeout(() => { clearArmed = null; b.textContent = 'Очистить историю'; b.classList.remove('danger'); }, 3000);
+    b.textContent = t('history.confirm'); b.classList.add('danger');
+    clearArmed = setTimeout(() => { clearArmed = null; b.textContent = t('history.clear'); b.classList.remove('danger'); }, 3000);
     return;
   }
   clearTimeout(clearArmed); clearArmed = null;
-  b.textContent = 'Очистить историю'; b.classList.remove('danger');
-  state.history = [];
-  saveHistory();
+  b.textContent = t('history.clear'); b.classList.remove('danger');
+  state.history = []; saveHistory();
   renderHistory(); renderStats(); setButton(!!state.run);
 });
 
-/* ---------- 8. ВКЛАДКИ И НАСТРОЙКИ ---------- */
+/* ---------- 10. ВКЛАДКИ, НАСТРОЙКИ, ЯЗЫК, ОФЛАЙН, СЧЁТЧИК ---------- */
 function showTab(name) {
   $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
-  $$('.tab').forEach((t) => t.classList.toggle('active', t.id === 'tab-' + name));
-  // Chart.js не умеет считать размер скрытого canvas — перерисуем при показе
+  $$('.tab').forEach((tb) => tb.classList.toggle('active', tb.id === 'tab-' + name));
   if (name === 'history') renderHistory();
   if (name === 'stats') renderStats();
+  if (name === 'test') requestAnimationFrame(() => { resizeWind(); resizeLive(); });
   if (history.replaceState) history.replaceState(null, '', '#' + name);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 $$('#tabs button').forEach((b) => b.addEventListener('click', () => showTab(b.dataset.tab)));
 $$('[data-goto]').forEach((a) => a.addEventListener('click', (e) => { e.preventDefault(); showTab(a.dataset.goto); }));
+
+// Гайд строится из словаря
+const GUIDE_ICONS = [
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 9h4M8 7v4M15 9.5v.01M17.5 11v.01"/><path d="M7 5h10a4 4 0 0 1 4 4v4.5a3.5 3.5 0 0 1-6 2.4L13.5 14h-3L9 15.9a3.5 3.5 0 0 1-6-2.4V9a4 4 0 0 1 4-4z"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10.5l5-3v9l-5-3z"/></svg>',
+  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>',
+];
+function renderGuide() {
+  $('#guideTerms').innerHTML = t('guide.terms').map(([b, p]) => `<div class="term"><b>${esc(b)}</b><p>${esc(p)}</p></div>`).join('');
+  $('#guideGrid').innerHTML = t('guide.cards').map(([h, p, rows], i) => `
+    <div class="card guide-card"><h3><span class="gi">${GUIDE_ICONS[i]}</span>${esc(h)}</h3><p>${esc(p)}</p>
+      <ul class="req">${rows.map(([a, b]) => `<li>${esc(a)}<b>${esc(b)}</b></li>`).join('')}</ul></div>`).join('');
+}
+
+// Применить язык ко всей странице
+function applyLang() {
+  const L = state.settings.lang;
+  document.documentElement.lang = L;
+  document.title = t('title');
+  $$('[data-i18n]').forEach((el) => {
+    const k = el.dataset.i18n;
+    if (k === 'foot.text') el.innerHTML = t(k); else el.textContent = t(k);
+  });
+  $('#langBtn').textContent = L === 'ru' ? 'EN' : 'RU';
+  $$('.ms-label').forEach((el) => { el.textContent = t('unit.ms'); });
+  renderGuide();
+  setPhase(phaseKey, $('#gaugePhase').classList.contains('up'));
+  if (alertState) showAlert(alertState.titleKey, alertState.textKey, alertState.vars, alertState.info);
+  if (state.last && $('#result').classList.contains('show')) renderResult(state.last, false);
+  if (!state.run) renderServerChip();
+}
 
 function applySettings() {
   const s = state.settings;
@@ -1291,48 +1817,75 @@ function applySettings() {
     const key = seg.dataset.setting;
     seg.querySelectorAll('button').forEach((b) => b.classList.toggle('on', String(s[key]) === b.dataset.value));
   });
+  applyLang();
   $$('.unit-label').forEach((el) => { el.textContent = unitLabel(); });
   if (gauge.mode !== 'ping') $('#gaugeUnit').textContent = unitLabel();
-  drawTicks();
-  // перерисуем значения в единицах
+  drawTicks(); drawLive();
   const last = state.history[state.history.length - 1];
   if (last && !state.run) { $('#v-down').textContent = fmtSpeed(last.down); $('#v-up').textContent = fmtSpeed(last.up); }
+  setButton(!!state.run);
   renderHistory(); renderStats();
 }
 $$('.seg').forEach((seg) => seg.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b || b.disabled) return;
   const key = seg.dataset.setting;
   state.settings[key] = key === 'duration' ? Number(b.dataset.value) : b.dataset.value;
+  if (key === 'sound' && b.dataset.value === 'on') { ensureAudio(); feedback('phase'); }
   saveSettings(); applySettings();
 }));
+$('#langBtn').addEventListener('click', () => { state.settings.lang = state.settings.lang === 'ru' ? 'en' : 'ru'; saveSettings(); applySettings(); });
 
-/* Информация о ближайшем узле Cloudflare (не обязательна для теста) */
-async function loadMeta() {
-  try {
-    const r = await fetch(BASE + '/meta', { cache: 'no-store' });
-    if (!r.ok) throw 0;
-    const m = await r.json();
-    // colo — узел Cloudflare (объект {iata, city, ...}), asOrganization — провайдер посетителя
-    const esc = (s) => String(s).replace(/[<>&"]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
-    const colo = m.colo && typeof m.colo === 'object' ? m.colo : { iata: m.colo };
-    const where = colo.city ? `${colo.city}${colo.iata ? ' (' + colo.iata + ')' : ''}` : (colo.iata || 'Cloudflare');
-    $('#serverText').innerHTML = `Узел <b>${esc(where)}</b>${m.asOrganization ? ' · ' + esc(m.asOrganization) : ''}`;
-    $('#serverDot').className = 'dot ok';
-  } catch (e) {
-    $('#serverText').innerHTML = navigator.onLine ? 'Сервер: <b>Cloudflare</b>' : '<b>Нет сети</b>';
-    $('#serverDot').className = 'dot' + (navigator.onLine ? '' : ' bad');
-  }
+// Офлайн / онлайн
+function updateOnline() {
+  $('#offlineBanner').classList.toggle('show', !navigator.onLine);
+  if (!state.run) renderServerChip();
 }
-window.addEventListener('online', loadMeta);
-window.addEventListener('offline', () => { $('#serverText').innerHTML = '<b>Нет сети</b>'; $('#serverDot').className = 'dot bad'; });
+window.addEventListener('offline', () => { abortTest('offline'); updateOnline(); });
+window.addEventListener('online', () => { updateOnline(); loadMeta(); });
+
+// Service worker: офлайн-режим и установка как приложение (только на https-хостинге)
+if ('serviceWorker' in navigator && location.protocol === 'https:') {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); });
+}
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installPrompt = e; $('#installRow').classList.add('show'); });
+$('#installBtn').addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  try { await installPrompt.userChoice; } catch (e) {}
+  installPrompt = null; $('#installRow').classList.remove('show');
+});
+window.addEventListener('appinstalled', () => toast(t('toast.installed')));
+
+// Счётчик посещений и тестов (Abacus, без регистрации и cookies). Посещение считаем раз за сессию.
+async function counter(action, key) {
+  const r = await fetch(`${COUNTER}/${action}/${COUNTER_NS}/${key}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error(r.status);
+  return (await r.json()).value;
+}
+function showCount(key, v) { if (v == null) return; $(key === 'visits' ? '#cVisits' : '#cTests').textContent = Number(v).toLocaleString(locale()); $('#counters').classList.add('show'); }
+async function countHit(key) { if (!/^https?:$/.test(location.protocol)) return; try { showCount(key, await counter('hit', key)); } catch (e) {} }
+async function initCounters() {
+  if (!/^https?:$/.test(location.protocol) || !navigator.onLine) return;
+  let seen = false;
+  try { seen = sessionStorage.getItem('zephyr-visit') === '1'; sessionStorage.setItem('zephyr-visit', '1'); } catch (e) {}
+  try { showCount('visits', await counter(seen ? 'get' : 'hit', 'visits')); } catch (e) {}
+  try { showCount('tests', await counter('get', 'tests')); } catch (e) { /* ключ появится после первого теста */ }
+}
 
 /* ---------- СТАРТ ---------- */
 $('#headerLogo').innerHTML = window.ZEPHYR_LOGO('zhead');
 buildGauge();
+setupWind(); setupLive();
 applySettings();
-setButton(false);
-requestAnimationFrame(gaugeLoop);
-loadMeta();
+setPhase('phase.ready');
+$('#gaugeUnit').textContent = unitLabel();
+$('#serverText').textContent = t('server.searching');
+updateOnline();
+requestAnimationFrame(frame);
+if (navigator.onLine) loadMeta();
+initCounters();
+window.addEventListener('resize', () => { resizeWind(); resizeLive(); });
 const initial = location.hash.slice(1);
 if (['history', 'stats', 'guide', 'settings'].includes(initial)) showTab(initial);
 </script>
