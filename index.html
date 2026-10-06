@@ -438,6 +438,41 @@ footer.foot a { color: inherit; }
 .counters.show { display: flex; }
 .counters b { color: var(--heading); font-family: var(--font-num); font-weight: 600; }
 
+/* вызов другу */
+.challenge { margin-bottom: 24px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; border-color: rgba(255, 158, 109, .45); background: linear-gradient(135deg, rgba(255, 158, 109, .16), rgba(184, 164, 255, .14)), var(--glass); animation: resultIn .7s cubic-bezier(.2, .8, .2, 1); }
+.challenge[hidden] { display: none; }
+.challenge .ch-ic { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; flex: none; background: rgba(255, 158, 109, .18); color: var(--apricot); }
+.challenge .ch-ic svg { width: 26px; height: 26px; }
+.challenge .ch-text { flex: 1; min-width: 200px; }
+.challenge h3 { font-size: 20px; margin: 0; overflow-wrap: anywhere; }
+.challenge p { margin: 5px 0 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.challenge p b { color: var(--heading); font-family: var(--font-num); font-weight: 600; }
+.challenge .ch-x { position: absolute; top: 10px; right: 12px; border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; padding: 6px; cursor: pointer; }
+.challenge .ch-x:hover { color: var(--lavender); }
+.share-btn.hot { background: linear-gradient(135deg, var(--apricot), #FFB48C); box-shadow: 0 8px 26px var(--apricot-glow); }
+.share-btn.hot:hover { box-shadow: 0 12px 34px var(--apricot-glow); }
+.vs-name { display: none; gap: 10px; flex-wrap: wrap; align-items: center; margin: -6px 0 20px; padding: 14px 16px; border-radius: 16px; background: var(--track); border: 1px solid var(--border); }
+.vs-name.show { display: flex; }
+.vs-name input { flex: 1; min-width: 160px; font: inherit; font-size: 15px; color: var(--text); background: transparent; border: 1px solid var(--border); border-radius: 12px; padding: 11px 14px; outline: none; }
+.vs-name input:focus { border-color: var(--lavender); }
+.vs-box { display: none; margin-bottom: 20px; padding: 18px; border-radius: 18px; border: 1px solid rgba(255, 158, 109, .4); background: linear-gradient(135deg, rgba(255, 158, 109, .1), rgba(184, 164, 255, .1)); }
+.vs-box.show { display: block; animation: resultIn .7s cubic-bezier(.2, .8, .2, 1); }
+.vs-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.vs-head h4 { margin: 0; font-size: 19px; color: var(--heading); overflow-wrap: anywhere; }
+.vs-head .vs-score { font-family: var(--font-num); font-size: 26px; font-weight: 700; color: var(--apricot); }
+.vs-table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; min-width: 0; }
+.vs-table th:first-child { width: 40%; }
+.vs-table th, .vs-table td { padding: 9px 8px; border-bottom: 1px solid var(--line); text-align: right; font-variant-numeric: tabular-nums; }
+.vs-table th:first-child, .vs-table td:first-child { text-align: left; color: var(--muted); }
+.vs-table th { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vs-table td { overflow-wrap: anywhere; }
+.vs-table td { font-family: var(--font-num); font-weight: 600; }
+.vs-table td.win { color: var(--apricot); }
+.vs-table td:first-child { font-family: var(--font-ui); font-weight: 400; font-size: 13px; white-space: normal; line-height: 1.35; }
+.vs-table td.win { text-shadow: 0 0 18px var(--apricot-glow); }
+@media (max-width: 720px) { .vs-table { font-size: 12.5px; } .vs-table th:first-child { width: 30%; } .vs-table td, .vs-table th { padding: 9px 3px; } .vs-table td { white-space: nowrap; overflow-wrap: normal; } .vs-table td:first-child { white-space: normal; font-size: 12.5px; } }
+.vs-box .share-row { margin-top: 14px; }
+
 /* =====================================================================
    10. АДАПТИВ
    ===================================================================== */
@@ -516,6 +551,12 @@ footer.foot a { color: inherit; }
          ВКЛАДКА 1: ТЕСТ
          ================================================================ -->
     <section class="tab active" id="tab-test">
+      <div class="card challenge" id="challengeBanner" hidden>
+        <button class="ch-x" id="chClose" aria-label="Закрыть">×</button>
+        <div class="ch-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/></svg></div>
+        <div class="ch-text"><h3 id="chTitle"></h3><p id="chText"></p></div>
+        <button class="share-btn hot" id="chAccept"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg><span data-i18n="vs.accept">Принять вызов</span></button>
+      </div>
       <div class="test-grid">
         <div class="card gauge-card">
           <canvas class="wind-canvas" id="windCanvas" aria-hidden="true"></canvas>
@@ -607,10 +648,13 @@ footer.foot a { color: inherit; }
             <p id="gradeText"></p>
           </div>
           <div class="share-row">
+            <button class="share-btn hot" id="vsBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/></svg><span data-i18n="vs.btn">Вызвать друга</span></button>
             <button class="share-btn" id="shareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.4M8.2 13.2l7.6 4.4"/></svg><span data-i18n="result.share">Поделиться</span></button>
             <button class="share-btn ghost" id="saveBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg><span data-i18n="result.save">Скачать картинку</span></button>
           </div>
         </div>
+        <div class="vs-name" id="vsName"><input id="vsNameInput" maxlength="24" autocomplete="nickname"><button class="share-btn hot" id="vsSend"><span data-i18n="vs.send">Отправить вызов</span></button></div>
+        <div class="vs-box" id="vsBox"></div>
         <div class="verdicts" id="verdicts"></div>
       </div>
     </section>
@@ -764,6 +808,11 @@ const STR = {
     'toast.saved': 'Картинка сохранена', 'toast.copied': 'Ссылка и результат скопированы', 'toast.savedCopied': 'Картинка сохранена, текст скопирован',
     'toast.switch': 'Cloudflare недоступен, переключаюсь на запасной сервер', 'toast.installed': 'ZEPHYR установлен как приложение',
     'share.text': 'Мой интернет в ZEPHYR: ↓ {down} · ↑ {up} · пинг {ping} мс',
+    'vs.btn': 'Вызвать друга', 'vs.send': 'Отправить вызов', 'vs.namePh': 'Твоё имя (можно пропустить)', 'vs.accept': 'Принять вызов', 'vs.reply': 'Ответить вызовом',
+    'vs.title': '{name} бросает тебе вызов', 'vs.titleAnon': 'Тебе бросили вызов', 'vs.text': 'Побей результат: ↓ {down} · ↑ {up} · пинг {ping} мс. Жми и узнаем, у кого интернет быстрее.',
+    'vs.share': 'Мой интернет в ZEPHYR: ↓ {down} · пинг {ping} мс. Побьёшь? 👉', 'vs.copied': 'Ссылка на вызов скопирована, кидай другу',
+    'vs.win': 'Ты победил! 🔥', 'vs.lose': '{name} оказался быстрее', 'vs.loseAnon': 'Соперник оказался быстрее', 'vs.draw': 'Ничья', 'vs.you': 'Ты', 'vs.friend': 'Соперник',
+    'vs.down': 'Загрузка', 'vs.up': 'Отдача', 'vs.ping': 'Пинг', 'vs.ld': 'Рост пинга под нагрузкой',
     'grade.0': 'Отлично', 'grade.0t': 'Сеть летает: можно всё и сразу, хоть на нескольких устройствах.',
     'grade.1': 'Хорошо', 'grade.1t': 'Уверенный канал для дома: видео, игры и звонки без сюрпризов.',
     'grade.2': 'Средне', 'grade.2t': 'Для повседневных задач хватит, на тяжёлых сценариях может проседать.',
@@ -861,6 +910,11 @@ const STR = {
     'toast.saved': 'Image saved', 'toast.copied': 'Link and result copied', 'toast.savedCopied': 'Image saved, text copied',
     'toast.switch': 'Cloudflare is unavailable, switching to a backup server', 'toast.installed': 'ZEPHYR installed as an app',
     'share.text': 'My internet on ZEPHYR: ↓ {down} · ↑ {up} · ping {ping} ms',
+    'vs.btn': 'Challenge a friend', 'vs.send': 'Send challenge', 'vs.namePh': 'Your name (optional)', 'vs.accept': 'Accept challenge', 'vs.reply': 'Challenge back',
+    'vs.title': '{name} challenges you', 'vs.titleAnon': 'You have been challenged', 'vs.text': 'Beat this: ↓ {down} · ↑ {up} · ping {ping} ms. Run the test and see whose internet is faster.',
+    'vs.share': 'My internet on ZEPHYR: ↓ {down} · ping {ping} ms. Can you beat it? 👉', 'vs.copied': 'Challenge link copied, send it to a friend',
+    'vs.win': 'You win! 🔥', 'vs.lose': '{name} was faster', 'vs.loseAnon': 'Your rival was faster', 'vs.draw': 'Draw', 'vs.you': 'You', 'vs.friend': 'Rival',
+    'vs.down': 'Download', 'vs.up': 'Upload', 'vs.ping': 'Ping', 'vs.ld': 'Loaded latency increase',
     'grade.0': 'Excellent', 'grade.0t': 'Your connection flies: everything at once, even on several devices.',
     'grade.1': 'Good', 'grade.1t': 'A solid home connection: video, games and calls without surprises.',
     'grade.2': 'Fair', 'grade.2t': 'Fine for everyday use, may struggle under heavy load.',
@@ -1677,6 +1731,94 @@ async function saveResultImage() {
 $('#shareBtn').addEventListener('click', shareResult);
 $('#saveBtn').addEventListener('click', saveResultImage);
 
+/* ---------- 7б. ВЫЗОВ ДРУГУ ---------- */
+// Ссылка вида https://zephyr-speed.github.io/#vs=<base64url JSON>: n — имя, d/u — Мбит/с, p — пинг, l — рост пинга под нагрузкой
+const VS_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4.5 13.5H12L11 22l8.5-11.5H12z"/></svg>';
+let vsRival = null;
+function vsCount(k) { if (/^https?:$/.test(location.protocol) && navigator.onLine) counter('hit', k).catch(() => {}); }
+const b64u = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s) => decodeURIComponent(escape(atob(s.replace(/-/g, '+').replace(/_/g, '/'))));
+function vsNum(v, max) { v = Number(v); return isFinite(v) && v >= 0 && v <= max ? v : null; }
+function readChallenge() {
+  const m = location.hash.match(/vs=([A-Za-z0-9_-]{4,600})/);
+  if (!m) return null;
+  try {
+    const o = JSON.parse(unb64u(m[1]));
+    const c = { n: String(o.n || '').replace(/[\u0000-\u001f]/g, '').trim().slice(0, 24), d: vsNum(o.d, 100000), u: vsNum(o.u, 100000), p: vsNum(o.p, 60000), l: vsNum(o.l, 60000) };
+    return c.d == null || c.p == null ? null : c;
+  } catch (e) { return null; }
+}
+function vsLink(r) {
+  const bb = bufferbloat(r);
+  const o = { n: ($('#vsNameInput').value || '').trim().slice(0, 24), d: Math.round(r.down * 10) / 10, u: Math.round(r.up * 10) / 10, p: Math.round(r.ping * 10) / 10 };
+  if (bb) o.l = Math.round(bb.inc);
+  return `${SITE_URL}/#vs=${b64u(JSON.stringify(o))}`;
+}
+function renderChallenge() {
+  const box = $('#challengeBanner');
+  if (!vsRival || (state.last && $('#vsBox').classList.contains('show'))) { box.hidden = true; return; }
+  const c = vsRival;
+  $('#chTitle').textContent = c.n ? t('vs.title', { name: c.n }) : t('vs.titleAnon');
+  $('#chText').innerHTML = esc(t('vs.text', { down: '\u0001' + fmtSpeed(c.d) + ' ' + unitLabel() + '\u0002', up: '\u0001' + (c.u == null ? '—' : fmtSpeed(c.u) + ' ' + unitLabel()) + '\u0002', ping: '\u0001' + fmtMs(c.p) + '\u0002' })).replace(/\u0001/g, '<b>').replace(/\u0002/g, '</b>');
+  box.hidden = false;
+}
+function renderVs(r) {
+  const box = $('#vsBox');
+  if (!vsRival || !r) { box.classList.remove('show'); box.innerHTML = ''; return; }
+  const c = vsRival, bb = bufferbloat(r);
+  const rows = [
+    ['vs.down', r.down, c.d, 1, (v) => fmtSpeed(v) + ' ' + unitLabel()],
+    ['vs.up', r.up, c.u, 1, (v) => fmtSpeed(v) + ' ' + unitLabel()],
+    ['vs.ping', r.ping, c.p, -1, (v) => fmtMs(v) + ' ' + t('unit.ms')],
+    ['vs.ld', bb ? bb.inc : null, c.l, -1, (v) => '+' + fmtMs(v) + ' ' + t('unit.ms')],
+  ].filter((x) => x[1] != null && x[2] != null);
+  let me = 0, him = 0;
+  const html = rows.map(([k, a, b, dir, f]) => {
+    const w = a === b ? 0 : (a - b) * dir > 0 ? 1 : -1;
+    if (w > 0) me++; else if (w < 0) him++;
+    return `<tr><td>${esc(t(k))}</td><td class="${w > 0 ? 'win' : ''}">${esc(f(a))}</td><td class="${w < 0 ? 'win' : ''}">${esc(f(b))}</td></tr>`;
+  }).join('');
+  const title = me > him ? t('vs.win') : me < him ? (c.n ? t('vs.lose', { name: c.n }) : t('vs.loseAnon')) : t('vs.draw');
+  box.innerHTML = `<div class="vs-head"><h4>${esc(title)}</h4><span class="vs-score">${me}:${him}</span></div>
+    <table class="vs-table"><thead><tr><th></th><th>${esc(t('vs.you'))}</th><th title="${esc(c.n || t('vs.friend'))}">${esc(c.n || t('vs.friend'))}</th></tr></thead><tbody>${html}</tbody></table>
+    <div class="share-row"><button class="share-btn hot" id="vsReply">${VS_ICON}<span>${esc(t('vs.reply'))}</span></button></div>`;
+  box.classList.add('show');
+  $('#vsReply').addEventListener('click', openVsName);
+  $('#challengeBanner').hidden = true;
+}
+function openVsName() {
+  const p = $('#vsName'), i = $('#vsNameInput');
+  i.placeholder = t('vs.namePh');
+  if (!i.value) { try { i.value = localStorage.getItem('zephyr-name') || ''; } catch (e) {} }
+  p.classList.add('show');
+  p.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => i.focus({ preventScroll: true }), 350);
+}
+async function sendChallenge() {
+  const r = state.last; if (!r) return;
+  const name = ($('#vsNameInput').value || '').trim();
+  try { localStorage.setItem('zephyr-name', name); } catch (e) {}
+  const url = vsLink(r);
+  const text = t('vs.share', { down: `${fmtSpeed(r.down)} ${unitLabel()}`, ping: fmtMs(r.ping) });
+  vsCount('challenges');
+  try {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) { await navigator.share({ title: 'ZEPHYR', text, url }); $('#vsName').classList.remove('show'); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  if (await copyText(`${text} ${url}`)) { toast(t('vs.copied')); $('#vsName').classList.remove('show'); }
+  else { window.prompt(t('vs.copied'), url); }
+}
+$('#vsBtn').addEventListener('click', openVsName);
+$('#vsSend').addEventListener('click', sendChallenge);
+$('#vsNameInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') sendChallenge(); });
+$('#chAccept').addEventListener('click', () => {
+  $('.gauge-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (!state.run) startTest();
+});
+$('#chClose').addEventListener('click', () => { $('#challengeBanner').hidden = true; });
+vsRival = readChallenge();
+if (vsRival) vsCount('challenge-opens');
+window.addEventListener('hashchange', () => { vsRival = readChallenge(); renderChallenge(); if (state.last) renderVs(state.last); });
+
 /* ---------- 8. ОЦЕНКА РЕЗУЛЬТАТА ---------- */
 const ICONS = {
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
@@ -1723,6 +1865,7 @@ function renderResult(r, animate = true) {
   $('#result').classList.add('show');
   if (animate) { arc.style.strokeDashoffset = 213.6; requestAnimationFrame(() => requestAnimationFrame(() => { arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100); })); }
   else arc.style.strokeDashoffset = 213.6 * (1 - ev.score / 100);
+  renderVs(r);
 }
 
 /* ---------- 9. ИСТОРИЯ, СТАТИСТИКА, ГРАФИКИ ---------- */
@@ -1878,6 +2021,7 @@ function applyLang() {
   setPhase(phaseKey, $('#gaugePhase').classList.contains('up'));
   if (alertState) showAlert(alertState.titleKey, alertState.textKey, alertState.vars, alertState.info);
   if (state.last && $('#result').classList.contains('show')) renderResult(state.last, false);
+  renderChallenge();
   if (!state.run) renderServerChip();
 }
 
